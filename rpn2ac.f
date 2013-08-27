@@ -137,32 +137,38 @@ c     # Compute Roe-averaged quantities:
          Sm = Sm/(rho_r*(ur - Sr) - rho_l*(ul - Sl))
          s(2,i) = 1.d0*Sm
          
-         ! Average EOS parameter for two wave cut on interaface 
-         ! and recalculate speeds
+!          ! Average EOS parameter for two wave cut on interaface 
+!          ! and recalculate speeds
 !          Smold = 1000.0
 !          if (gammal .ne. gammar) then
 !             ! Use iterative method modifying gamma averages and 
 !             ! CD speed, Sm
-!             do while (abs(Sm - Smold) < .0001)
+!             do while (abs(Sm - Smold) < .0000001)
 !               Smold = 1.d0*Sm
 !               frac = abs(Sm*dt2/dx2)
 !               if (Sm > 0.0) then
 !                 gammarn = gammal*frac + gammar*(1.0 - frac)
 !                 gamma1rn = gammarn - 1.0
 !                 pinfrn = pinfl*frac + pinfr*(1.0 - frac)
+!                 gammaln = gammal
+!                 gamma1ln = gamma1l
+!                 pinfln = pinfl
 !               end if
 !               
 !               if (Sm < 0.0) then
 !                 gammaln = gammar*frac + gammal*(1.0 - frac)
 !                 gamma1ln = gammaln - 1.0
 !                 pinfln = pinfr*frac + pinfl*(1.0 - frac)
+!                 gammarn = gammar
+!                 gamma1rn = gamma1r
+!                 pinflr = pinfr
 !               end if
 !               
 !               ! Recompute pressures
 !               pl = gamma1ln*(qr(4,i-1) - ek_l) 
-!               pl = pl/(1.0 - omel*rho_l) - pinfln*gammaln
+!               pl = pl - pinfln*gammaln
 !               pr = gamma1rn*(ql(4,i) - ek_r) 
-!               pr = pr/(1.0 - omer*rho_r) - pinfrn*gammarn
+!               pr = pr - pinfrn*gammarn
 !               
 !               ! Recompute speeds
 !               cROE(i) = (pl/rhsqrtl + pr/rhsqrtr) / rhsq2 + 
@@ -184,17 +190,12 @@ c     # Compute Roe-averaged quantities:
 !               Sm = Sm/(rho_r*(ur - Sr) - rho_l*(ul - Sl))
 !               s(2,i) = 1.d0*Sm
 !             end do
-!             if (Sm > 0.0) then
-!                 gammar = gammarn
-!                 gamma1r = gamma1rn
-!                 pinfr = pinfrn
-!               end if
-!               
-!               if (Sm < 0.0) then
-!                 gammal = gammaln
-!                 gamma1l = gamma1ln
-!                 pinfl = pinfln
-!               end if
+!             gammar = gammarn
+!             gamma1r = gamma1rn
+!             pinfr = pinfrn
+!             gammal = gammaln
+!             gamma1l = gamma1ln
+!             pinfl = pinfln
 !           end if
           
 !         Force zero speed at contact discontinuity

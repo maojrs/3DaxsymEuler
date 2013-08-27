@@ -175,9 +175,9 @@ def setrun(claw_pkg='classic'):
     clawdata.dt_max = 1.000000e+99
     
     # Desired Courant number if variable dt used 
-    clawdata.cfl_desired = 0.900000
+    clawdata.cfl_desired = 0.200000 #0.900000
     # max Courant number to allow without retaking step with a smaller dt:
-    clawdata.cfl_max = 1.000000
+    clawdata.cfl_max = 0.350000 #1.000000
     
     # Maximum number of time steps to allow between output times:
     clawdata.steps_max = 500
@@ -211,7 +211,7 @@ def setrun(claw_pkg='classic'):
     #   2 or 'superbee' ==> superbee
     #   3 or 'vanleer'  ==> van Leer
     #   4 or 'mc'       ==> MC limiter
-    clawdata.limiter = ['mc', 'mc', 'mc']
+    clawdata.limiter = ['minmod', 'minmod', 'minmod']
     
     clawdata.use_fwaves = False    # True ==> use f-wave version of algorithms
     
