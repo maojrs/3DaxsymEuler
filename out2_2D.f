@@ -127,6 +127,7 @@ c
       ene(:,:) = q(4,1:mx,1:my)
       qi(:,:) = (gamma(:,:)-1.d0)*(ene(:,:) - 0.5*(momx(:,:)*momx(:,:)
      & + momy(:,:)*momy(:,:))/rho(:,:)) - gamma(:,:)*pinf(:,:)
+!       qi(:,:) = ene(:,:)
 !       qi(:,:) = q(fig,1:mx,1:my)
       CALL out_2_silo(qi,nx,ny,xlower,ylower,dx,dy,fig,iframe)
       print*, 'Silo output: frame:', iframe

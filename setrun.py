@@ -39,21 +39,28 @@ def setrun(claw_pkg='classic'):
     probdata = rundata.new_UserData(name='probdata',fname='setprob.data')
     probdata.add_param('gammagas',     1.4,  'gamma for ideal gas')
     probdata.add_param('gammaplas',    1.1, 'gamma est. for polystirene')
-    probdata.add_param('gammawat',     2.5,  'gamma for water') #7.15 before 
+    #probdata.add_param('gammawat',     2.5,  'gamma for water') #7.15 before 
+    probdata.add_param('gammawat',     7.15,  'gamma for water')
+
 
     probdata.add_param('pinfgas',     0.0,  'pinf for stiffend gas/plastic')
     # pinfplas Calculated with c^2=gamma*(p+pinf)/rho to make c =2240m/s (polyestirene speed of sound), 
     # (c= 1484 in water). Values from water obtained fron kirsten's paper
     probdata.add_param('pinfplas',    4789425947.72,  'pinf for stiffend gas/plastic') 
     #probdata.add_param('pinfplas',    1000000000.0,  'pinf for stiffend gas/plastic') 
-    probdata.add_param('pinfwat',       880801075.0,  'pinf for stiffend water') #Previously 300000000.0
+    #probdata.add_param('pinfwat',       880801075.0,  'pinf for stiffend water') #Previously 300000000.0
+    #probdata.add_param('pinfwat',        300000000.0,  'pinf for stiffend water') #Previously 300000000.0
+    probdata.add_param('pinfwat',           3000000.0,  'pinf for stiffend water') #Previously 300000000.0
+
+
 
     probdata.add_param('omegas',     0.0,  'omega (specific excluded volume) for stiffend gas/plastic')
     probdata.add_param('omeplas',     0.0,  'omega (specific excluded volume) for stiffend gas/plastic')
     probdata.add_param('omewat',     0.0,  'omega (specific excluded volume) for stiffend water')
     probdata.add_param('rhog',     1.0,  'air density in kg/m^3')
     probdata.add_param('rhop',     1050.0,  'polystirene density in kg/m^3')
-    probdata.add_param('rhow',     1000.0,  'water density inkg/m^3')
+    #probdata.add_param('rhow',     1000.0,  'water density inkg/m^3')
+    probdata.add_param('rhow',     50.0,  'water density inkg/m^3')
     
     
     #------------------------------------------------------------------
@@ -77,8 +84,8 @@ def setrun(claw_pkg='classic'):
     clawdata.upper[1] = 2.000000e+00          # yupper
     
     # Number of grid cells:
-    clawdata.num_cells[0] = 600 #1500      # mx
-    clawdata.num_cells[1] = 40  #20      # my
+    clawdata.num_cells[0] = 400 #1500      # mx
+    clawdata.num_cells[1] = 20  #20      # my
     
 
     # ---------------
@@ -126,7 +133,7 @@ def setrun(claw_pkg='classic'):
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
         clawdata.num_output_times = 50
-        clawdata.tfinal = 0.02 #0.050000
+        clawdata.tfinal = 0.01 #0.050000
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -175,9 +182,9 @@ def setrun(claw_pkg='classic'):
     clawdata.dt_max = 1.000000e+99
     
     # Desired Courant number if variable dt used 
-    clawdata.cfl_desired = 0.200000 #0.900000
+    clawdata.cfl_desired = 0.30000 #0.200000 #0.900000
     # max Courant number to allow without retaking step with a smaller dt:
-    clawdata.cfl_max = 0.350000 #1.000000
+    clawdata.cfl_max = 0.4000 #0.350000 #1.000000
     
     # Maximum number of time steps to allow between output times:
     clawdata.steps_max = 500
@@ -190,8 +197,8 @@ def setrun(claw_pkg='classic'):
     # Order of accuracy:  1 => Godunov,  2 => Lax-Wendroff plus limiters
     clawdata.order = 2
     
-    # Use dimensional splitting? (not yet available for AMR) !godunov(dim splittin), unsplit (for transverse)
-    clawdata.dimensional_split = 'godunov'
+    # Use dimensional splitting? (not yet available for AMR) !godunov or strang(dim splittin), unsplit (for transverse)
+    clawdata.dimensional_split = 'strang'
     
     # For unsplit method, transverse_waves can be 
     #  0 or 'none'      ==> donor cell (only normal solver used)
@@ -211,7 +218,7 @@ def setrun(claw_pkg='classic'):
     #   2 or 'superbee' ==> superbee
     #   3 or 'vanleer'  ==> van Leer
     #   4 or 'mc'       ==> MC limiter
-    clawdata.limiter = ['minmod', 'minmod', 'minmod']
+    clawdata.limiter = ['mc', 'mc', 'mc']
     
     clawdata.use_fwaves = False    # True ==> use f-wave version of algorithms
     

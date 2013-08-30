@@ -143,10 +143,10 @@ c     # Compute Roe-averaged quantities:
 !          if (gammal .ne. gammar) then
 !             ! Use iterative method modifying gamma averages and 
 !             ! CD speed, Sm
-!             do while (abs(Sm - Smold) < .0000001)
+!             do while (abs(Sm - Smold) > .0000001)
 !               Smold = 1.d0*Sm
 !               frac = abs(Sm*dt2/dx2)
-!               if (Sm > 0.0) then
+!               if (Sm .ge. 0.0) then
 !                 gammarn = gammal*frac + gammar*(1.0 - frac)
 !                 gamma1rn = gammarn - 1.0
 !                 pinfrn = pinfl*frac + pinfr*(1.0 - frac)
@@ -161,7 +161,7 @@ c     # Compute Roe-averaged quantities:
 !                 pinfln = pinfr*frac + pinfl*(1.0 - frac)
 !                 gammarn = gammar
 !                 gamma1rn = gamma1r
-!                 pinflr = pinfr
+!                 pinfrn = pinfr
 !               end if
 !               
 !               ! Recompute pressures
@@ -170,7 +170,7 @@ c     # Compute Roe-averaged quantities:
 !               pr = gamma1rn*(ql(4,i) - ek_r) 
 !               pr = pr - pinfrn*gammarn
 !               
-!               ! Recompute speeds
+! !               ! Recompute speeds
 !               cROE(i) = (pl/rhsqrtl + pr/rhsqrtr) / rhsq2 + 
 !      &  0.5*((ur - ul)/rhsq2)**2
 !               gamma1ROE = (gamma1ln*rhsqrtl + gamma1rn*rhsqrtr) / rhsq2
@@ -180,9 +180,13 @@ c     # Compute Roe-averaged quantities:
 !               
 !               cl = dsqrt(gamma1ln*(pl + qr(4,i-1) - ek_l)/rho_l)
 !               cr = dsqrt(gamma1rn*(pr + ql(4,i) - ek_r)/rho_r)
+! !               cl = dsqrt(gammal*(pl + pinfl)/rho_l)
+! !               cr = dsqrt(gammar*(pr + pinfr)/rho_r)
 !               
 !               Sl = min(ul - cl,u(i) - cROE(i))
-!               Sr = max(u(i) + cROE(i), ur + cr) 
+!               Sr = max(u(i) + cROE(i), ur + cr)
+! !               Sl = min(ul - cl,ur - cr) ! u(i) - a(i)
+! !               Sr = max(ul + cl,ur + cr)
 !               s(1,i) = 1.d0*Sl
 !               s(3,i) = 1.d0*Sr
 !               
@@ -190,6 +194,7 @@ c     # Compute Roe-averaged quantities:
 !               Sm = Sm/(rho_r*(ur - Sr) - rho_l*(ul - Sl))
 !               s(2,i) = 1.d0*Sm
 !             end do
+!             print*, gammar, gammarn
 !             gammar = gammarn
 !             gamma1r = gamma1rn
 !             pinfr = pinfrn
@@ -197,10 +202,10 @@ c     # Compute Roe-averaged quantities:
 !             gamma1l = gamma1ln
 !             pinfl = pinfln
 !           end if
-          
-!         Force zero speed at contact discontinuity
-!         makes wave two not move without affecting it's influence
-!         to wave 1 and 3 given by Sm
+         
+!         ! Force zero speed at contact discontinuity
+!         ! makes wave two not move without affecting it's influence
+!         ! to wave 1 and 3 given by Sm
          if (gammal .ne. gammar) then
             !Sm = 0.0
             s(2,i) = 0.0

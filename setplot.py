@@ -167,7 +167,7 @@ def setplot(plotdata):
     #plotitem.plotstyle = '-o'
     #plotitem.color = 'r'
     
-    plotaxes.afteraxes = aa
+    #plotaxes.afteraxes = aa
 
     
 
