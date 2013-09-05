@@ -49,8 +49,8 @@ def setrun(claw_pkg='classic'):
     probdata.add_param('pinfplas',    4789425947.72,  'pinf for stiffend gas/plastic') 
     #probdata.add_param('pinfplas',    1000000000.0,  'pinf for stiffend gas/plastic') 
     #probdata.add_param('pinfwat',       880801075.0,  'pinf for stiffend water') #Previously 300000000.0
-    #probdata.add_param('pinfwat',        300000000.0,  'pinf for stiffend water') #Previously 300000000.0
-    probdata.add_param('pinfwat',           3000000.0,  'pinf for stiffend water') #Previously 300000000.0
+    probdata.add_param('pinfwat',        300000000.0,  'pinf for stiffend water') #Previously 300000000.0
+    #probdata.add_param('pinfwat',           3000000.0,  'pinf for stiffend water') #Previously 300000000.0
 
 
 
@@ -59,8 +59,8 @@ def setrun(claw_pkg='classic'):
     probdata.add_param('omewat',     0.0,  'omega (specific excluded volume) for stiffend water')
     probdata.add_param('rhog',     1.0,  'air density in kg/m^3')
     probdata.add_param('rhop',     1050.0,  'polystirene density in kg/m^3')
-    #probdata.add_param('rhow',     1000.0,  'water density inkg/m^3')
-    probdata.add_param('rhow',     50.0,  'water density inkg/m^3')
+    probdata.add_param('rhow',     1000.0,  'water density inkg/m^3')
+    #probdata.add_param('rhow',     50.0,  'water density inkg/m^3')
     
     
     #------------------------------------------------------------------
@@ -84,8 +84,8 @@ def setrun(claw_pkg='classic'):
     clawdata.upper[1] = 2.000000e+00          # yupper
     
     # Number of grid cells:
-    clawdata.num_cells[0] = 400 #1500      # mx
-    clawdata.num_cells[1] = 20  #20      # my
+    clawdata.num_cells[0] = 400 #700 #1500      # mx
+    clawdata.num_cells[1] = 20 # 40  #20      # my
     
 
     # ---------------
@@ -132,8 +132,8 @@ def setrun(claw_pkg='classic'):
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 50
-        clawdata.tfinal = 0.01 #0.050000
+        clawdata.num_output_times = 5 #200 #50
+        clawdata.tfinal = 0.001 #0.03 #0.01 #0.050000
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -198,7 +198,7 @@ def setrun(claw_pkg='classic'):
     clawdata.order = 2
     
     # Use dimensional splitting? (not yet available for AMR) !godunov or strang(dim splittin), unsplit (for transverse)
-    clawdata.dimensional_split = 'strang'
+    clawdata.dimensional_split = 'godunov'
     
     # For unsplit method, transverse_waves can be 
     #  0 or 'none'      ==> donor cell (only normal solver used)
@@ -218,7 +218,7 @@ def setrun(claw_pkg='classic'):
     #   2 or 'superbee' ==> superbee
     #   3 or 'vanleer'  ==> van Leer
     #   4 or 'mc'       ==> MC limiter
-    clawdata.limiter = ['mc', 'mc', 'mc']
+    clawdata.limiter = [4, 4, 4]
     
     clawdata.use_fwaves = False    # True ==> use f-wave version of algorithms
     

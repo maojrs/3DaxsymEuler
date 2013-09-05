@@ -15,7 +15,7 @@ c     # existence may be required by some compilers.
       do i=1-mbc,mx+mbc 
         xcell = xlower + (i-0.5d0)*dx 
         do j=1-mbc,my+mbc 
-            r = ylower + (j-0.5d0)*dy 
+            r = ylower + (j-0.5d0)*dy +5.d0*dy ! Artificil extra to avoid singular source terms
             ! Equation of state variables             
             gamma = aux(1,i,j)
             pinf = aux(2,i,j)

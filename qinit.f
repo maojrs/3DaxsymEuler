@@ -106,7 +106,6 @@ c
             q(4,i,j) = q(4,i,j)+Egas0*(gammagas - 1.d0)/
      & (1.d0 - omegas*rhog)
             q(4,i,j) = q(4,i,j)*(1.d0 - omewat*rhow)/(gammawat - 1.d0)
-
           end if
   151    continue	  
   150  continue
