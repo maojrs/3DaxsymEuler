@@ -41,6 +41,8 @@ def setrun(claw_pkg='classic'):
     probdata.add_param('gammaplas',    1.1, 'gamma est. for polystirene')
     #probdata.add_param('gammawat',     2.5,  'gamma for water') #7.15 before 
     probdata.add_param('gammawat',     7.15,  'gamma for water')
+    #probdata.add_param('gammawat',     1.9,  'gamma for water')
+
 
 
     probdata.add_param('pinfgas',     0.0,  'pinf for stiffend gas/plastic')
@@ -50,7 +52,7 @@ def setrun(claw_pkg='classic'):
     #probdata.add_param('pinfplas',    1000000000.0,  'pinf for stiffend gas/plastic') 
     #probdata.add_param('pinfwat',       880801075.0,  'pinf for stiffend water') #Previously 300000000.0
     probdata.add_param('pinfwat',        300000000.0,  'pinf for stiffend water') #Previously 300000000.0
-    #probdata.add_param('pinfwat',           3000000.0,  'pinf for stiffend water') #Previously 300000000.0
+    #probdata.add_param('pinfwat',           0.0,  'pinf for stiffend water') #Previously 300000000.0
 
 
 
@@ -59,8 +61,8 @@ def setrun(claw_pkg='classic'):
     probdata.add_param('omewat',     0.0,  'omega (specific excluded volume) for stiffend water')
     probdata.add_param('rhog',     1.0,  'air density in kg/m^3')
     probdata.add_param('rhop',     1050.0,  'polystirene density in kg/m^3')
-    probdata.add_param('rhow',     1000.0,  'water density inkg/m^3')
-    #probdata.add_param('rhow',     50.0,  'water density inkg/m^3')
+    probdata.add_param('rhow',     1000.0,  'water density in kg/m^3')
+    #probdata.add_param('rhow',    1.0,  'water density in kg/m^3')
     
     
     #------------------------------------------------------------------
@@ -78,14 +80,14 @@ def setrun(claw_pkg='classic'):
     clawdata.num_dim = num_dim
     
     # Lower and upper edge of computational domain:
-    clawdata.lower[0] = -10.0          # xlower
-    clawdata.upper[0] = 3.0          # xupper
+    clawdata.lower[0] = -0.03 #-7.0           # xlower
+    clawdata.upper[0] = 0.03                  # xupper
     clawdata.lower[1] = 0.000000e+00          # ylower
-    clawdata.upper[1] = 2.000000e+00          # yupper
+    clawdata.upper[1] = 0.020000e+00          # yupper
     
     # Number of grid cells:
-    clawdata.num_cells[0] = 400 #700 #1500      # mx
-    clawdata.num_cells[1] = 20 # 40  #20      # my
+    clawdata.num_cells[0] = 800 #400 #800 #1400 #1400 #3000 #700 #1500      # mx
+    clawdata.num_cells[1] = 80 #40 #80 #40 #40 # 40  #20      # my
     
 
     # ---------------
@@ -96,7 +98,7 @@ def setrun(claw_pkg='classic'):
     clawdata.num_eqn = 4
 
     # Number of auxiliary variables in the aux array (initialized in setaux)
-    clawdata.num_aux = 3
+    clawdata.num_aux = 4
     
     # Index of aux array corresponding to capacity function, if there is one:
     clawdata.capa_index = 0
@@ -132,8 +134,8 @@ def setrun(claw_pkg='classic'):
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 5 #200 #50
-        clawdata.tfinal = 0.001 #0.03 #0.01 #0.050000
+        clawdata.num_output_times = 800 #300 #200 #50
+        clawdata.tfinal = 0.0006 #0.0002 #0.0015 #0.0002 #0.0003 #0.0004 #0.03 #0.01 #0.050000
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -182,12 +184,12 @@ def setrun(claw_pkg='classic'):
     clawdata.dt_max = 1.000000e+99
     
     # Desired Courant number if variable dt used 
-    clawdata.cfl_desired = 0.30000 #0.200000 #0.900000
+    clawdata.cfl_desired = 0.35000 #0.200000 #0.900000
     # max Courant number to allow without retaking step with a smaller dt:
-    clawdata.cfl_max = 0.4000 #0.350000 #1.000000
+    clawdata.cfl_max = 0.450000 #0.350000 #1.000000
     
     # Maximum number of time steps to allow between output times:
-    clawdata.steps_max = 500
+    clawdata.steps_max = 2000 #500
 
 
     # ------------------
@@ -240,9 +242,9 @@ def setrun(claw_pkg='classic'):
     #   0 or 'user'     => user specified (must modify bcNamr.f to use this option)
     #   1 or 'extrap'   => extrapolation (non-reflecting outflow)
     #   2 or 'periodic' => periodic (must specify this at both boundaries)
-    #   3 or 'wall'     => solid wall for systems where q(2) is normal velocity
+    #   3 or 'wall'     => soli                print*, i,ixy,mx, pstard wall for systems where q(2) is normal velocity
     
-    clawdata.bc_lower[0] = 'extrap'   # at xlower
+    clawdata.bc_lower[0] = 'user' #''user'  # at xlower
     clawdata.bc_upper[0] = 'extrap'   # at xupper
 
     clawdata.bc_lower[1] = 'extrap'   # at ylower

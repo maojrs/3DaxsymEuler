@@ -45,7 +45,7 @@ c     ---------------
       common /param/ omegas,omeplas,omewat
       common /param/ rhog,rhop,rhow
       
-      common /param2/ dt2, dx2
+      common /param2/ dt2, dx2,dy2
 
       common /comroe/ u,v,u2v2,enth,al,ar,g1a2,euv
 c
@@ -53,9 +53,11 @@ c     # Dimensional splitting
       if (ixy.eq.1) then
           mu = 2
           mv = 3
+          dxx = dx2
       else
           mu = 3
           mv = 2
+          dxx = dy2
       endif
       
 c     # Compute Roe-averaged quantities:
@@ -83,12 +85,11 @@ c     # Compute Roe-averaged quantities:
          ! Kinetic Energy
          ek_l = 0.5*rho_l*(ul**2 + vl**2)
          ek_r = 0.5*rho_r*(ur**2 + vr**2)
-         ! Pressures
+         ! Pressures (Use Tait EOS on water and/or plastic, SGEOS on air or SGEOS on both)
          pl = gamma1l*(qr(4,i-1) - ek_l) 
          pl = pl/(1.0 - omel*rho_l) - pinfl*gammal
          pr = gamma1r*(ql(4,i) - ek_r) 
          pr = pr/(1.0 - omer*rho_r) - pinfr*gammar
-         
 
          ! Additional qunatites to pass to transverse solver (ROE averages)
          rhsqrtl = dsqrt(qr(1,i-1))
@@ -118,17 +119,41 @@ c     # Compute Roe-averaged quantities:
 !          enth_r = (ql(4,i) + pr)/rho_r
 !          cl = dsqrt(gamma1l*(enth_l - .5d0*ul**2))
 !          cr = dsqrt(gamma1r*(enth_r - .5d0*ur**2))
-!          cl = dsqrt(gammal*(pl + pinfl)/rho_l)
-!          cr = dsqrt(gammar*(pr + pinfr)/rho_r)
+         cl = dsqrt(gammal*(pl + pinfl)/rho_l)
+         cr = dsqrt(gammar*(pr + pinfr)/rho_r)
          
-         cl = dsqrt(gamma1l*(pl + qr(4,i-1) - ek_l)/rho_l)
-         cr = dsqrt(gamma1r*(pr + ql(4,i) - ek_r)/rho_r)
+!          cl = dsqrt(gamma1l*(pl + qr(4,i-1) - ek_l)/rho_l)
+!          cr = dsqrt(gamma1r*(pr + ql(4,i) - ek_r)/rho_r)
 
-         ! Compute the speed of left and right HLLC wave
-!          Sl = min(ul - cl,ur - cr) ! u(i) - a(i)
-!          Sr = max(ul + cl,ur + cr) ! u(i) + a(i),
-         Sl = min(ul - cl,u(i) - cROE(i))
-         Sr = max(u(i) + cROE(i), ur + cr) 
+!          ! Compute the speed of left and right HLLC wave
+         Sl = min(ul - cl,ur - cr) ! u(i) - a(i)
+         Sr = max(ul + cl,ur + cr) ! u(i) + a(i),
+! !          Sl = min(ul - cl,u(i) - cROE(i))
+! !          Sr = max(u(i) + cROE(i), ur + cr) 
+!          s(1,i) = 1.d0*Sl
+!          s(3,i) = 1.d0*Sr
+
+         ! Recompute Sm, Sl, and Sr using pressure wave speed estimates
+         rhoavg = 0.5*(rho_l + rho_r)
+         cavg = 0.5*(cl + cr)
+         pstar = 0.5*(pl + pr) - 0.5*(ur - ul)*rhoavg*cavg
+         
+!          Sm = 0.5*(ul + ur) - 0.5*(pr - pl)/(rhoavg*cavg)
+!          s(2,i) = 1.d0*Sm
+         
+!          !Pressure wave-speed estimates 
+!          if (pl .ge. pstar) then
+!               Sl = ul - cl
+!          else
+!               Sl = ul - cl*dsqrt(1.0 + (gammal + 1.0)/(2*gammal)*
+!      & ((pstar + pinfl)/(pl + pinfl) - 1.0))
+!          end if
+!          if (pr .ge. pstar) then
+!               Sr = ur + cr
+!          else
+!               Sr = ur + cr*dsqrt(1.0 + (gammar + 1.0)/(2*gammar)*
+!      & ((pstar + pinfr)/(pr + pinfr) - 1.0))
+!          end if
          s(1,i) = 1.d0*Sl
          s(3,i) = 1.d0*Sr
 
@@ -136,16 +161,19 @@ c     # Compute Roe-averaged quantities:
          Sm = pr - pl + rho_r*ur*(ur - Sr) - rho_l*ul*(ul - Sl) 
          Sm = Sm/(rho_r*(ur - Sr) - rho_l*(ul - Sl))
          s(2,i) = 1.d0*Sm
+!          if (ixy .eq. 1 .and. i .eq. floor(real(mx)/2.0)) then
+!             print*, pl, pr, Sm, cl
+!          end if
          
 !          ! Average EOS parameter for two wave cut on interaface 
 !          ! and recalculate speeds
-!          Smold = 1000.0
+!          Smold = 100000.0
 !          if (gammal .ne. gammar) then
 !             ! Use iterative method modifying gamma averages and 
 !             ! CD speed, Sm
-!             do while (abs(Sm - Smold) > .0000001)
+!             do while (abs(Sm - Smold) > .001)
 !               Smold = 1.d0*Sm
-!               frac = abs(Sm*dt2/dx2)
+!               frac = abs(Sm*dt2/dx2) !We dont know dt
 !               if (Sm .ge. 0.0) then
 !                 gammarn = gammal*frac + gammar*(1.0 - frac)
 !                 gamma1rn = gammarn - 1.0
@@ -170,23 +198,23 @@ c     # Compute Roe-averaged quantities:
 !               pr = gamma1rn*(ql(4,i) - ek_r) 
 !               pr = pr - pinfrn*gammarn
 !               
-! !               ! Recompute speeds
-!               cROE(i) = (pl/rhsqrtl + pr/rhsqrtr) / rhsq2 + 
-!      &  0.5*((ur - ul)/rhsq2)**2
-!               gamma1ROE = (gamma1ln*rhsqrtl + gamma1rn*rhsqrtr) / rhsq2
-!               psiROE = (gamma1ln*(qr(4,i-1) - ek_l)/rhsqrtl +
-!      & gamma1rn*(ql(4,i) - ek_r)/rhsqrtr) / rhsq2
-!               cROE(i) = dsqrt(psiROE + gamma1ROE*cROE(i))
+! ! !               ! Recompute speeds
+! !               cROE(i) = (pl/rhsqrtl + pr/rhsqrtr) / rhsq2 + 
+! !      &  0.5*((ur - ul)/rhsq2)**2
+! !               gamma1ROE = (gamma1ln*rhsqrtl + gamma1rn*rhsqrtr) / rhsq2
+! !               psiROE = (gamma1ln*(qr(4,i-1) - ek_l)/rhsqrtl +
+! !      & gamma1rn*(ql(4,i) - ek_r)/rhsqrtr) / rhsq2
+! !               cROE(i) = dsqrt(psiROE + gamma1ROE*cROE(i))
+! !               
+! !               cl = dsqrt(gamma1ln*(pl + qr(4,i-1) - ek_l)/rho_l)
+! !               cr = dsqrt(gamma1rn*(pr + ql(4,i) - ek_r)/rho_r)
+!               cl = dsqrt(gammal*(pl + pinfl)/rho_l)
+!               cr = dsqrt(gammar*(pr + pinfr)/rho_r)
 !               
-!               cl = dsqrt(gamma1ln*(pl + qr(4,i-1) - ek_l)/rho_l)
-!               cr = dsqrt(gamma1rn*(pr + ql(4,i) - ek_r)/rho_r)
-! !               cl = dsqrt(gammal*(pl + pinfl)/rho_l)
-! !               cr = dsqrt(gammar*(pr + pinfr)/rho_r)
-!               
-!               Sl = min(ul - cl,u(i) - cROE(i))
-!               Sr = max(u(i) + cROE(i), ur + cr)
-! !               Sl = min(ul - cl,ur - cr) ! u(i) - a(i)
-! !               Sr = max(ul + cl,ur + cr)
+! !               Sl = min(ul - cl,u(i) - cROE(i))
+! !               Sr = max(u(i) + cROE(i), ur + cr)
+!               Sl = min(ul - cl,ur - cr) ! u(i) - a(i)
+!               Sr = max(ul + cl,ur + cr)
 !               s(1,i) = 1.d0*Sl
 !               s(3,i) = 1.d0*Sr
 !               
@@ -194,26 +222,28 @@ c     # Compute Roe-averaged quantities:
 !               Sm = Sm/(rho_r*(ur - Sr) - rho_l*(ul - Sl))
 !               s(2,i) = 1.d0*Sm
 !             end do
-!             print*, gammar, gammarn
-!             gammar = gammarn
-!             gamma1r = gamma1rn
-!             pinfr = pinfrn
-!             gammal = gammaln
-!             gamma1l = gamma1ln
-!             pinfl = pinfln
+! !             print*, gammar, gammarn
+! !             gammar = gammarn
+! !             gamma1r = gamma1rn
+! !             pinfr = pinfrn
+! !             gammal = gammaln
+! !             gamma1l = gamma1ln
+! !             pinfl = pinfln
 !           end if
          
-!         ! Force zero speed at contact discontinuity
-!         ! makes wave two not move without affecting it's influence
-!         ! to wave 1 and 3 given by Sm
-         if (gammal .ne. gammar) then
-            !Sm = 0.0
-            s(2,i) = 0.0
-          end if
          
          ! Compute middle state pressure (both formulas yield the same value )
          pstar_l = pl + rho_l*(ul - Sm)*(ul - Sl)
          pstar_r = pr + rho_r*(ur - Sm)*(ur - Sr)
+         
+        ! Force zero speed at contact discontinuity
+        ! makes wave two not move without affecting it's influence
+        ! to wave 1 and 3 given by Sm
+         if (gammal .ne. gammar) then
+            !Sm = 0.0
+            go to 10
+            s(2,i) = 0.0
+          end if
 
          ! Calculate ql* and qr* HLLC middle states (without pressure term)
          do j=1,meqn
@@ -255,8 +285,96 @@ c        j index over q variables
 !         wave(mu,3,i) = ql(mu,i) - qmr(mu,i)
 !         wave(mv,3,i) = ql(mv,i) - qmr(mv,i) 
 !         wave(4,3,i) = ql(4,i) - qmr(4,i)
+ 
+          ! Do almost EXACT RIEMANN SOLVER for interface
+   10     continue
+          if (gammal .ne. gammar) then
+  !           ! Newton's ,method
+              pstar = min(pl,pr) + 0.9*(max(pl,pr) - min(pl,pr)) !0.5*(pl + pr)
+              pold = pstar + 10
+              do while (abs(pstar - pold) > 0.0001)
+                pold = pstar
+                CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,
+     & pinfl,pinfr,pstar,phi,phi_prime,rhos_l,rhos_r,ustar)
+                pstar = pstar - phi/phi_prime
+              end do
 
+!             ! Bisection method to find pressure in exact solution
+!             pold = -10.0
+!             pleft = pl
+!             pright = pr
+!             pstar = 0.5*(pleft + pright)
+!             do while (abs(pstar - pold) > 0.01)
+!               pold = pstar
+!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
+!      & pinfr,pleft,phil,phi_prime,rhos_l,rhos_r,ustar)
+!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
+!      & pinfr,pright,phir,phi_prime,rhos_l,rhos_r,ustar)
+!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
+!      & pinfr,pstar,phi,phi_prime,rhos_l,rhos_r,ustar)
+!               if (phi*phil > 0) then
+!                 pleft = pstar
+!               else
+!                 pright = pstar
+!               end if
+!               pstar = 0.5*(pleft + pright)
+!             end do
+              
+              ! Compute the speed of left and right HLLC wave
+            betal = (pl + pinfl)*(gammal - 1.0)/(gammal + 1.0)
+            betar = (pr + pinfr)*(gammar - 1.0)/(gammar + 1.0)
+            alphal = 2.0/(rho_l*(gammal + 1.0))
+            alphar = 2.0/(rho_r*(gammar + 1.0))
+            Sl = ul - dsqrt((pstar + pinfl + betal)/alphal)/rho_l
+            Sr = ur + dsqrt((pstar + pinfr + betar)/alphar)/rho_r
+
+!             ustar = 0.0
+
+            s(1,i) = 1.d0*Sl
+            s(2,i) = 1.d0*ustar
+            s(3,i) = 1.d0*Sr              
+            
+            bl = (gammal + 1.0)/(gammal - 1.0)
+            br = (gammar + 1.0)/(gammar - 1.0)
+!             
+!             if (isnan(pstar)) then
+!                 print*, pl,pr
+!                 print*,1
+!                 read(*,*)
+!             end if
+            
+              ! Calculate densities, momentums and energys 
+            qml(1,i) = rhos_l !rho_l*(1 + bl*pstar/pl)/(pstar/pl + bl)
+            qmr(1,i) = rhos_r !rho_r*(1 + br*pstar/pr)/(pstar/pr + br)
+            qml(mu,i) = qml(1,i)*ustar
+            qmr(mu,i) = qmr(1,i)*ustar
+            qml(mv,i) = qml(1,i)*vl!*rho_l*(Sl - ul)/(Sl - ustar)
+            qmr(mv,i) = qmr(1,i)*vr!*rho_r*(Sr - ur)/(Sr - ustar)
+            qml(4,i) = (pstar + gammal*pinfl)/(gammal - 1.0) + 
+     & 0.5*(qml(mu,i)**2 + qml(mv,i)**2)/qml(1,i)
+            qmr(4,i) = (pstar + gammar*pinfr)/(gammar - 1.0) + 
+     & 0.5*(qmr(mu,i)**2 + qmr(mv,i)**2)/qmr(1,i)
+
+!               qml(4,i) = rhos_l*(qr(4,i-1)/rho_l + 
+!      & (ustar - ul)*(ustar + pl/(rho_l*(Sl - ul))))
+!          qmr(4,i) = rhos_r*(ql(4,i)/rho_r + 
+!      & (ustar - ur)*(ustar + pr/(rho_r*(Sr - ur))))
+              
+          
+c        # Compute the 3 waves.
+c        j index over q variables
+          do j=1,meqn
+              q_l = qr(j,i-1)
+              q_r = ql(j,i)
+              wave(j,1,i) = qml(j,i) - q_l
+              wave(j,2,i) = qmr(j,i) - qml(j,i)
+              wave(j,3,i) = q_r - qmr(j,i) 
+          end do
+         end if
+         
    20    continue
+ 
+ 
 c
 c
 c     # amdq = SUM s*wave   over left-going waves

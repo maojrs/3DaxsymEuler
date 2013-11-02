@@ -35,7 +35,7 @@ MODULES = \
 
 SOURCES = \
   qinit.f \
-  rpn2ac.f \
+  rpn2exact.f \
   rpt2ac.f \
   setprob.f \
   setaux.f \
@@ -43,10 +43,11 @@ SOURCES = \
   b4step2.f \
   out2_2D.f \
   out2silo_2D.f90 \
+  bc2.f \
+  phi_exact_tamman.f90 \
   $(CLAW)/classic/src/2d/driver.f90 \
   $(CLAW)/classic/src/2d/claw2ez.f \
   $(CLAW)/classic/src/2d/claw2.f \
-  $(CLAW)/classic/src/2d/bc2.f \
   $(CLAW)/classic/src/2d/step2.f90 \
   $(CLAW)/classic/src/2d/step2ds.f90 \
   $(CLAW)/classic/src/2d/dimsp2.f \

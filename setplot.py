@@ -34,8 +34,9 @@ def setplot(plotdata):
       # Wall pwidth
       #x = [-2.0,-2.0,2.0,2.0]
       #y = [-6,6,6,-6]
-      x = [-0.85, -0.85, 0.85, 0.85]
-      y = [0.0, 0.85, 0.85, 0.0]
+      x = [-0.0085, -0.0085, 0.0085, 0.0085]
+      x = [y - 0.0 for y in x]
+      y = [0.0, 0.0085, 0.0085, 0.0]
       #y[:] = [xx - gcs for xx in y]
       plot(x,y,'k',linewidth=2.0)
 
@@ -46,10 +47,10 @@ def setplot(plotdata):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = 'auto'
-    plotaxes.ylimits = 'auto'
+    plotaxes.xlimits = [-0.03,0.03] #'auto'
+    plotaxes.ylimits = [-0.05,0.05]#'auto'
     plotaxes.title = 'Density'
-    plotaxes.scaled = True      # so aspect ratio is 1
+    #plotaxes.scaled = True      # so aspect ratio is 1
 
     # Set up for item on these axes:
     plotitem = plotaxes.new_plotitem(plot_type='2d_pcolor')
@@ -71,10 +72,10 @@ def setplot(plotdata):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = 'auto'
-    plotaxes.ylimits = 'auto'
+    plotaxes.xlimits = [-0.03,0.03] #'auto'
+    plotaxes.ylimits = [-0.05,0.05] #'auto'
     plotaxes.title = 'Momentum x'
-    plotaxes.scaled = True      # so aspect ratio is 1
+    #plotaxes.scaled = True      # so aspect ratio is 1
 
     # Set up for item on these axes:
     plotitem = plotaxes.new_plotitem(plot_type='2d_pcolor')
@@ -94,10 +95,10 @@ def setplot(plotdata):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = 'auto'
-    plotaxes.ylimits = 'auto'
+    plotaxes.xlimits = [-0.03,0.03]#'auto'
+    plotaxes.ylimits = [-0.05,0.05]#'auto'
     plotaxes.title = 'Momentum y'
-    plotaxes.scaled = True      # so aspect ratio is 1
+    #plotaxes.scaled = True      # so aspect ratio is 1
 
     # Set up for item on these axes:
     plotitem = plotaxes.new_plotitem(plot_type='2d_pcolor')
@@ -117,10 +118,10 @@ def setplot(plotdata):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = 'auto'
-    plotaxes.ylimits = 'auto'
+    plotaxes.xlimits = [-0.03,0.03]#'auto'
+    plotaxes.ylimits = [-0.05,0.05]#'auto'
     plotaxes.title = 'Energy'
-    plotaxes.scaled = True      # so aspect ratio is 1
+    #plotaxes.scaled = True      # so aspect ratio is 1
 
     # Set up for item on these axes:
     plotitem = plotaxes.new_plotitem(plot_type='2d_pcolor')
@@ -140,14 +141,16 @@ def setplot(plotdata):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = [-3,3] #[-8.5,16] #'auto' -16
-    plotaxes.ylimits = [-5,5]
+    plotaxes.xlimits = [-0.03,0.03] #[-3,3] #[-8.5,16] #'auto' -16
+    plotaxes.ylimits = [-0.02,0.04]#[-5,5]
     plotaxes.title = 'Pressure'
+    plotaxes.scaled = True      # so aspect ratio is 1
     
     plotitem = plotaxes.new_plotitem(plot_type='2d_pcolor')
     plotitem.pcolor_cmin = 90000
-    plotitem.pcolor_cmax = 200000
+    plotitem.pcolor_cmax = 300000
 
+    #When only using SGEOS
     def Pressure(current_data):
         q = current_data.q   # solution when this function called
         aux = current_data.aux
@@ -159,8 +162,8 @@ def setplot(plotdata):
         momx = q[1,:,:]           # momentum
         momy = q[2,:,:]
         ene = q[3,:,:]           # energy
-        P = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho)/(1.0 - omega*rho)
-        P = P - gamma*pinf 
+        P = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho) #/(1.0 - omega*rho)
+        P = P - gamma*pinf
         return P
 
     plotitem.plot_var = Pressure  # defined above
@@ -168,7 +171,72 @@ def setplot(plotdata):
     #plotitem.color = 'r'
     
     plotaxes.afteraxes = aa
+    
+        # Figure for Pressure slice
+    # -------------------
+    
+    plotfigure = plotdata.new_plotfigure(name='Pressure slice', figno=5)
+    # Set up for axes in this figure:
+    plotaxes = plotfigure.new_plotaxes()
+    plotaxes.xlimits = [-0.03,0.03] #[-3,3] #[-8.5,16] #'auto' -16
+    plotaxes.ylimits = [90000,300000]
+    plotaxes.title = 'Pressure slice'
+    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
 
+    def xsec(current_data):
+        # Return x value and surface eta at this point, along y=0
+        from pylab import find,ravel
+        x = current_data.x
+        y = current_data.y
+        dy = current_data.dy
+        q = current_data.q
+        aux = current_data.aux
+
+        ij = find((y <= dy/2.) & (y > -dy/2.))
+        x_slice = ravel(x)[ij]
+        gamma_slice = ravel(aux[0,:,:])[ij]
+        pinf_slice = ravel(aux[1,:,:])[ij]
+        rho_slice = ravel(q[0,:,:])[ij]
+        momx_slice = ravel(q[1,:,:])[ij]
+        momy_slice = ravel(q[2,:,:])[ij]
+        ene_slice = ravel(q[3,:,:])[ij]
+        P_slice = (gamma_slice - 1.0)*(ene_slice - 0.5*(momx_slice**2 + momy_slice**2)/rho_slice)
+        P_slice = P_slice - gamma_slice*pinf_slice
+        return x_slice, P_slice
+
+    plotitem.map_2d_to_1d = xsec
+    plotitem.plotstyle = '-kx'
+    plotitem.kwargs = {'markersize':3}
+
+
+      ## Figure for Something slice
+    ## -------------------
+    
+    #plotfigure = plotdata.new_plotfigure(name='Something slice', figno=6)
+    ## Set up for axes in this figure:
+    #plotaxes = plotfigure.new_plotaxes()
+    #plotaxes.xlimits = [-0.03,0.03] #[-3,3] #[-8.5,16] #'auto' -16
+    ##plotaxes.ylimits = [90000,300000]
+    #plotaxes.title = 'Something slice'
+    #plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+
+    #def xsec(current_data):
+        ## Return x value and surface eta at this point, along y=0
+        #from pylab import find,ravel
+        #x = current_data.x
+        #y = current_data.y
+        #dy = current_data.dy
+        #q = current_data.q
+        #aux = current_data.aux
+
+        #ij = find((y <= dy/2.) & (y > -dy/2.))
+        #x_slice = ravel(x)[ij]
+        #ene_slice = ravel(q[3,:,:])[ij]
+        #return x_slice, ene_slice
+
+    #plotitem.map_2d_to_1d = xsec
+    #plotitem.plotstyle = '-kx'
+    #plotitem.kwargs = {'markersize':3}
     
 
     # Parameters used only when creating html and/or latex hardcopy
