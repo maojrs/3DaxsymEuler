@@ -1,4 +1,4 @@
-c
+c ! NOTE: change number of waves to two to use HLL solver
 c
 c
 c =========================================================
@@ -7,7 +7,7 @@ c =========================================================
 c =========================================================
 c
 c     # solve Riemann problems for the 2D Euler equations (normal solver) 
-c     # using HLLC approximate Riemann solver
+c     # using HLL - Tamman-exact hybrid approximate Riemann solver
 c
 c     # On input, ql contains the state vector at the left edge of each cell
 c     #           qr contains the state vector at the right edge of each cell
@@ -21,15 +21,14 @@ c     #                                    and right state ql(i,:)
 c     # From the basic clawpack routine step1, rp is called with ql = qr = q.
 c
 c
-!       USE auxmodule
-    
       implicit double precision (a-h,o-z)
-      double precision pstar, Sr, Sl
-      integer     ii,jj
       dimension   ql(meqn, 1-mbc:maxmx+mbc)
       dimension   qr(meqn, 1-mbc:maxmx+mbc)
+      dimension   qm(meqn, 1-mbc:maxmx+mbc)
       dimension   qml(meqn, 1-mbc:maxmx+mbc)
       dimension   qmr(meqn, 1-mbc:maxmx+mbc)
+      dimension   fluxl(meqn,1-mbc:maxmx+mbc)
+      dimension   fluxr(meqn,1-mbc:maxmx+mbc)
       dimension    s(mwaves, 1-mbc:maxmx+mbc)
       dimension wave(meqn, mwaves, 1-mbc:maxmx+mbc)
       dimension amdq(meqn, 1-mbc:maxmx+mbc)
@@ -49,7 +48,7 @@ c     ---------------
       common /param/ omegas,omeplas,omewat
       common /param/ rhog,rhop,rhow
       
-      common /param2/ dt2, dx2
+      common /param2/ dt2, dx2,dy2
 
       common /comroe/ u,v,u2v2,enth,al,ar,g1a2,euv
 c
@@ -57,17 +56,19 @@ c     # Dimensional splitting
       if (ixy.eq.1) then
           mu = 2
           mv = 3
+          dxx = dx2
       else
           mu = 3
           mv = 2
+          dxx = dy2
       endif
       
 c     # Compute Roe-averaged quantities:
       do 20 i=2-mbc,mx+mbc
-!          xcell = -10.0 + (i-0.5d0)*.052
-!          if (ixy .eq. 2) then
-!             xcell = (i-0.5d0)*.05
-!          end if
+         xcell = -10.0 + (i-0.5d0)*.052
+         if (ixy .eq. 2) then
+            xcell = (i-0.5d0)*.05
+         end if
          gammal = auxr(1,i-1)
          gammar = auxl(1,i)
          gamma1l = gammal - 1.0
@@ -88,51 +89,78 @@ c     # Compute Roe-averaged quantities:
          ek_l = 0.5*rho_l*(ul**2 + vl**2)
          ek_r = 0.5*rho_r*(ur**2 + vr**2)
          ! Pressures (Use Tait EOS on water and/or plastic, SGEOS on air or SGEOS on both)
-         pl = gamma1l*(qr(4,i-1) - ek_l) - pinfl*gammal
-         pr = gamma1r*(ql(4,i) - ek_r) - pinfr*gammar
+         pl = gamma1l*(qr(4,i-1) - ek_l) 
+         pl = pl/(1.0 - omel*rho_l) - pinfl*gammal
+         pr = gamma1r*(ql(4,i) - ek_r) 
+         pr = pr/(1.0 - omer*rho_r) - pinfr*gammar
+
+         ! Additional qunatites to pass to transverse solver (ROE averages)
+         rhsqrtl = dsqrt(qr(1,i-1))
+         rhsqrtr = dsqrt(ql(1,i))
+         rhsq2 = rhsqrtl + rhsqrtr
+         u(i) = (qr(mu,i-1)/rhsqrtl + ql(mu,i)/rhsqrtr) / rhsq2
+         v(i) = (qr(mv,i-1)/rhsqrtl + ql(mv,i)/rhsqrtr) / rhsq2
+         enth(i) = (((qr(4,i-1)+pl)/rhsqrtl
+     &             + (ql(4,i)+pr)/rhsqrtr)) / rhsq2
+         u2v2(i) = u(i)**2 + v(i)**2
+         a2l = gamma1l*(enth(i) - .5d0*u2v2(i))
+         a2r = gamma1r*(enth(i) - .5d0*u2v2(i))
+         al(i) = dsqrt(a2l)
+         ar(i) = dsqrt(a2r)
+         g1a2(i) = 1.d0/(enth(i) - .5d0*u2v2(i))
+         euv(i) = enth(i) - u2v2(i) 
+         cROE(i) = (pl/rhsqrtl + pr/rhsqrtr) / rhsq2 + 
+     &  0.5*((ur - ul)/rhsq2)**2
+         gamma1ROE = (gamma1l*rhsqrtl + gamma1r*rhsqrtr) / rhsq2
+         psiROE = (gamma1l*(qr(4,i-1) - ek_l)/rhsqrtl +
+     & gamma1r*(ql(4,i) - ek_r)/rhsqrtr) / rhsq2
+         cROE(i) = dsqrt(psiROE + gamma1ROE*cROE(i))
     
+
+         ! Compute left and right speeds
          cl = dsqrt(gammal*(pl + pinfl)/rho_l)
          cr = dsqrt(gammar*(pr + pinfr)/rho_r)
-                         
-!         ! Force zero speed at contact discontinuity
-!         ! makes wave two not move without affecting it's influence
-!         ! to wave 1 and 3 given by Sm
-!          if (gammal .ne. gammar) then
-!             !Sm = 0.0
-!             s(2,i) = 0.0
-!           end if
 
-        ! Newton's ,method
-          pstar = 0.5*(pl + pr)
-          pold = pstar + 10
-          do while (abs(pstar - pold) > 0.0001)
-            pold = pstar
-            CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,ul,ur,
+!          ! Compute the speed of left and right HLLC wave
+         Sl = min(ul - cl,ur - cr) ! u(i) - a(i)
+         Sr = max(ul + cl,ur + cr) ! u(i) + a(i),
+         
+         s(1,i) = 1.d0*Sl
+         s(3,i) = 1.d0*Sr
+         
+         ! Compute HLLC middle speed state (see research notebook)
+         Sm = pr - pl + rho_r*ur*(ur - Sr) - rho_l*ul*(ul - Sl) 
+         Sm = Sm/(rho_r*(ur - Sr) - rho_l*(ul - Sl))
+         s(2,i) = 1.d0*Sm
+
+         do j=1,meqn
+             qml(j,i) = rho_l*(Sl - ul)/(Sl - Sm)
+             qmr(j,i) = rho_r*(Sr - ur)/(Sr - Sm)
+         end do
+         
+         ! Add multiplicative terms to momentum ones
+         qml(mu,i) = Sm*qml(mu,i)
+         qmr(mu,i) = Sm*qmr(mu,i)
+         qml(mv,i) = vl*qml(mv,i)
+         qmr(mv,i) = vr*qmr(mv,i)
+         ! Add second terms to energy one (see Toro pg. 325)
+         qml(4,i) = qml(4,i)*(qr(4,i-1)/rho_l + 
+     & (Sm - ul)*(Sm + pl/(rho_l*(Sl - ul))))
+         qmr(4,i) = qmr(4,i)*(ql(4,i)/rho_r + 
+     & (Sm - ur)*(Sm + pr/(rho_r*(Sr - ur))))
+         
+         if ((gammal .ne. 1.4) .or. (gammar .ne. 1.4)) then
+            ! Do exact Tamman Riemann solver at interface and in water
+            ! Newton's ,method
+            pstar = 0.5*(pl + pr)
+            pold = pstar + 10
+            do while (abs(pstar - pold) > 0.0001)
+              pold = pstar
+              CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,ul,ur,
      & pinfl,pinfr,pstar,phi,phi_prime,rhos_l,rhos_r,ustar)
-            pstar = pstar - phi/phi_prime
-          end do
-              
-!             ! Bisection method to find pressure in exact solution
-!             pold = -10.0
-!             pleft = pl
-!             pright = pr
-!             pstar = 0.5*(pleft + pright)
-!             do while (abs(pstar - pold) > 0.0001)
-!               pold = pstar
-!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
-!      & pinfr,pleft,phil,phi_prime,rhos_l,rhos_r,ustar)
-!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
-!      & pinfr,pright,phir,phi_prime,rhos_l,rhos_r,ustar)
-!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
-!      & pinfr,pstar,phi,phi_prime,rhos_l,rhos_r,ustar)
-!               if (phi*phil > 0) then
-!                 pleft = pstar
-!               else
-!                 pright = pstar
-!               end if
-!               pstar = 0.5*(pleft + pright)
-!             end do
-                       
+              pstar = pstar - phi/phi_prime
+            end do
+            
             ! Compute the speed of left and right wave (See MJ IVINGS paper)
             betal = (pl + pinfl)*(gammal - 1.0)/(gammal + 1.0)
             betar = (pr + pinfr)*(gammar - 1.0)/(gammar + 1.0)
@@ -140,44 +168,17 @@ c     # Compute Roe-averaged quantities:
             alphar = 2.0/(rho_r*(gammar + 1.0))
             Sl = ul - dsqrt((pstar + pinfl + betal)/alphal)/rho_l
             Sr = ur + dsqrt((pstar + pinfr + betar)/alphar)/rho_r
-!             Sl2 = min(ul - cl,ur - cr) ! u(i) - a(i)
-!             Sr2 = max(ul + cl,ur + cr) ! u(i) + a(i),
-!             Sl = ul - cl
-!             Sr = ur + cr
-
             
-            s(1,i) = 1.d0*Sl
-            s(2,i) = 1.d0*ustar
-            s(3,i) = 1.d0*Sr
+            s(1,i) = 1.d0*Sl - 1.0*ustar
+            s(2,i) = 0.0*ustar
+            s(3,i) = 1.d0*Sr - 1.0*ustar
             
-!             s(2,i) = 0.0:
-            
-!             if (gammal .ne. gammar) then
-!                 s(2,1) = 0.0
+! ! !         ! Zero CD speed at interface, note ustar .ne. 0, just the wave speed
+!             s(2,i) = 0.1*ustar !0.0!ustar/10.0
+!             if (ixy .eq. 1) then
+!                 s(2,i) = 0.d0
 !             end if
-
-              if (gammal .ne. gammar) then !(gammal .ne. 1.4) .or. (gammar .ne. 1.4)) then
-                s(1,i) = 1.d0*Sl - 1.0*ustar
-                s(2,i) = 0.0*ustar
-                s(3,i) = 1.d0*Sr - 1.0*ustar
-              end if
-            
-            
-!             ! Send info to ustar_array to do the averaging
-!             ii = floor(auxl(4,i))
-!             jj = floor(auxl(5,i))
-!             ustar_array(ii,jj,1) = 0.0
-!             ustar_array(ii,jj,2) = 0.0
-!             if (gammal .ne. gammar) then ! .and. ixy .eq. 1) then
-!                 s(2,i) = 0.0
-! !                 if (ixy .eq. 1) then
-! !                   ustar_array(ii,jj,1) = ustar
-! !                 else
-! !                   ustar_array(ii,jj,2) = ustar
-! !                 end if
-!             end if     
-                       
-            
+!             
             bl = (gammal + 1.0)/(gammal - 1.0)
             br = (gammar + 1.0)/(gammar - 1.0)
             ! Calculate densities, momentums and energys
@@ -191,20 +192,20 @@ c     # Compute Roe-averaged quantities:
      & 0.5*(qml(mu,i)**2 + qml(mv,i)**2)/qml(1,i)
             qmr(4,i) = (pstar + gammar*pinfr)/(gammar - 1.0) + 
      & 0.5*(qmr(mu,i)**2 + qmr(mv,i)**2)/qmr(1,i)
-        
+         end if
+
 c        # Compute the 3 waves.
 c        j index over q variables
-        do j=1,meqn
-            q_l = qr(j,i-1)
-            q_r = ql(j,i)
-            wave(j,1,i) = qml(j,i) - q_l
-            wave(j,2,i) = qmr(j,i) - qml(j,i)
-            wave(j,3,i) = q_r - qmr(j,i) 
-        end do
+         do j=1,meqn
+             q_l = qr(j,i-1)
+             q_r = ql(j,i)
+             wave(j,1,i) = qml(j,i) - q_l
+             wave(j,2,i) = qmr(j,i) - qml(j,i)
+             wave(j,3,i) = q_r - qmr(j,i) 
+         end do
          
    20    continue
  
-
 c
 c
 c     # amdq = SUM s*wave   over left-going waves

@@ -34,8 +34,9 @@ FFLAGS ?= -I/usr/include -L/usr/lib -lsilo -lm -lstdc++
 MODULES = \
 
 SOURCES = \
+  auxmodule.f90 \
   qinit.f \
-  rpn2exact.f \
+  rpn2HLLC-exact.f \
   rpt2ac.f \
   setprob.f \
   setaux.f \

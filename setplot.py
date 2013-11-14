@@ -37,8 +37,101 @@ def setplot(plotdata):
       x = [-0.0085, -0.0085, 0.0085, 0.0085]
       x = [y - 0.0 for y in x]
       y = [0.0, 0.0085, 0.0085, 0.0]
+      xborder = [-0.05, 0.05, 0.05, -0.05]
+      yborder = [0.0, 0.0]
       #y[:] = [xx - gcs for xx in y]
       plot(x,y,'k',linewidth=2.0)
+      
+    #When only using SGEOS
+    def Pressure(current_data):
+        q = current_data.q   # solution when this function called
+        aux = current_data.aux
+        gamma = aux[0,:,:]
+        gamma1 = aux[0,:,:] - 1.0
+        pinf = aux[1,:,:]
+        omega = aux[2,:,:]
+        rho = q[0,:,:]           # density
+        momx = q[1,:,:]           # momentum
+        momy = q[2,:,:]
+        ene = q[3,:,:]           # energy
+        P = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho) #/(1.0 - omega*rho)
+        P = P - gamma*pinf
+        return P
+      
+    # Mirrored pressure pcolor plor
+    def MirrorPressure_pcolor(current_data):
+        from pylab import linspace,plot,pcolor,annotate,text,cm
+        xx = current_data.x
+        yy = current_data.y
+        dy = abs(yy[1,1] - yy[1,2])
+        q = current_data.q   # solution when this function called
+        aux = current_data.aux
+        gamma = aux[0,:,:]
+        gamma1 = aux[0,:,:] - 1.0
+        pinf = aux[1,:,:]
+        omega = aux[2,:,:]
+        rho = q[0,:,:]           # density
+        momx = q[1,:,:]           # momentum
+        momy = q[2,:,:]
+        ene = q[3,:,:]           # energy
+        P = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho) #/(1.0 - omega*rho)
+        P = P - gamma*pinf
+        #xborder = [-0.05, 0.05, 0.05, -0.05]
+        #yborder = [0.0, 0.0, 0.02, 0.02]
+        #plot(xborder,yborder,'k',linewidth=2.0)
+        x = [-0.0085, -0.0085, 0.0085, 0.0085]
+        x = [zz - 0.0 for zz in x]
+        y = [0.0, 0.0085, 0.0085, 0.0]
+        y2 = [-zz for zz in y]
+        #xborder = [-0.05, 0.05, 0.05, -0.05]
+        #yborder = [-0.02, -0.02, 0.]
+        plot(x,y,'k',linewidth=2.0)
+        plot(x,y2,'k',linewidth=2.0)
+        
+        pcolor(xx,yy-0.5*dy,P,cmap=cm.jet, vmin=90000, vmax=300000)
+        pcolor(xx,-(yy-0.5*dy),P,cmap=cm.jet, vmin=90000, vmax=300000)
+        
+         # Mirrored pressure pcolor plor
+    def MirrorPressure_contour(current_data):
+        from pylab import linspace,plot,contour,contourf,annotate,text,cm,colorbar,show
+        import matplotlib.ticker as ticker 
+        xx = current_data.x
+        yy = current_data.y
+        dy = abs(yy[1,1] - yy[1,2])
+        q = current_data.q   # solution when this function called
+        aux = current_data.aux
+        gamma = aux[0,:,:]
+        gamma1 = aux[0,:,:] - 1.0
+        pinf = aux[1,:,:]
+        omega = aux[2,:,:]
+        rho = q[0,:,:]           # density
+        momx = q[1,:,:]           # momentum
+        momy = q[2,:,:]
+        ene = q[3,:,:]           # energy
+        P = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho) #/(1.0 - omega*rho)
+        P = P - gamma*pinf
+        #xborder = [-0.05, 0.05, 0.05, -0.05]
+        #yborder = [0.0, 0.0, 0.02, 0.02]
+        #plot(xborder,yborder,'k',linewidth=2.0)
+        x = [-0.0085, -0.0085, 0.0085, 0.0085]
+        x = [zz - 0.0 for zz in x]
+        y = [0.0, 0.0085, 0.0085, 0.0]
+        y2 = [-zz for zz in y]
+        #xborder = [-0.05, 0.05, 0.05, -0.05]
+        #yborder = [-0.02, -0.02, 0.]
+        plot(x,y,'k',linewidth=2.0)
+        plot(x,y2,'k',linewidth=2.0)
+        
+        locator = ticker.MaxNLocator(20) # if you want no more than 10 contours 
+        locator.create_dummy_axis()
+        locator.set_bounds(100000, 300000) 
+        levs = locator() 
+        
+        contourf(xx,yy-0.5*dy,P, levs, alpha=.75, cmap=cm.Blues)
+        contourf(xx,-(yy-0.5*dy),P, levs,alpha=.75, cmap=cm.Blues)
+        colorbar()
+        contour(xx,yy-0.5*dy,P,levs, colors='black', linewidth=0.5)
+        contour(xx,-(yy-0.5*dy),P,levs, colors='black', linewidth=0.5)
 
     # Figure for Density
     # -------------------
@@ -149,33 +242,49 @@ def setplot(plotdata):
     plotitem = plotaxes.new_plotitem(plot_type='2d_pcolor')
     plotitem.pcolor_cmin = 90000
     plotitem.pcolor_cmax = 300000
-
-    #When only using SGEOS
-    def Pressure(current_data):
-        q = current_data.q   # solution when this function called
-        aux = current_data.aux
-        gamma = aux[0,:,:]
-        gamma1 = aux[0,:,:] - 1.0
-        pinf = aux[1,:,:]
-        omega = aux[2,:,:]
-        rho = q[0,:,:]           # density
-        momx = q[1,:,:]           # momentum
-        momy = q[2,:,:]
-        ene = q[3,:,:]           # energy
-        P = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho) #/(1.0 - omega*rho)
-        P = P - gamma*pinf
-        return P
-
     plotitem.plot_var = Pressure  # defined above
     #plotitem.plotstyle = '-o'
     #plotitem.color = 'r'
-    
+
     plotaxes.afteraxes = aa
+    
+     ## Figure for Pressure Rotated
+    ## -------------------
+
+    #plotfigure = plotdata.new_plotfigure(name='Pressure', figno=4)
+
+    ##yy = plotdata.current_data.y
+    ##dy = abs(yy[1,1] - yy[1,2])
+
+    ## Set up for axes in this figure:
+    #plotaxes = plotfigure.new_plotaxes()
+    #plotaxes.xlimits = [-0.03,0.03] #[-3,3] #[-8.5,16] #'auto' -16
+    #plotaxes.ylimits = [-0.02,0.02]#[-5,5]
+    #plotaxes.title = 'Pressure'
+    #plotaxes.scaled = True      # so aspect ratio is 1
+    
+    #plotaxes.afteraxes = MirrorPressure_pcolor
+    
+    ##plotaxes.afteraxes = aa
+    
+        # Figure for Pressure Contour
+    # -------------------
+
+    plotfigure = plotdata.new_plotfigure(name='Pressure Contour', figno=5)
+
+        # Set up for axes in this figure:
+    plotaxes = plotfigure.new_plotaxes()
+    plotaxes.xlimits = [-0.03,0.03] #[-3,3] #[-8.5,16] #'auto' -16
+    plotaxes.ylimits = [-0.02,0.02]#[-5,5]
+    plotaxes.title = 'Pressure'
+    plotaxes.scaled = True      # so aspect ratio is 1
+    
+    plotaxes.afteraxes = MirrorPressure_contour
     
         # Figure for Pressure slice
     # -------------------
     
-    plotfigure = plotdata.new_plotfigure(name='Pressure slice', figno=5)
+    plotfigure = plotdata.new_plotfigure(name='Pressure slice', figno=6)
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
     plotaxes.xlimits = [-0.03,0.03] #[-3,3] #[-8.5,16] #'auto' -16

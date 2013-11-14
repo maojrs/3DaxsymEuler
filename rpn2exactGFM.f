@@ -21,7 +21,7 @@ c     #                                    and right state ql(i,:)
 c     # From the basic clawpack routine step1, rp is called with ql = qr = q.
 c
 c
-!       USE auxmodule
+      USE auxmodule
     
       implicit double precision (a-h,o-z)
       double precision pstar, Sr, Sl
@@ -144,40 +144,15 @@ c     # Compute Roe-averaged quantities:
 !             Sr2 = max(ul + cl,ur + cr) ! u(i) + a(i),
 !             Sl = ul - cl
 !             Sr = ur + cr
-
             
             s(1,i) = 1.d0*Sl
-            s(2,i) = 1.d0*ustar
+            s(2,i) = ustar
             s(3,i) = 1.d0*Sr
             
-!             s(2,i) = 0.0:
-            
-!             if (gammal .ne. gammar) then
-!                 s(2,1) = 0.0
-!             end if
-
-              if (gammal .ne. gammar) then !(gammal .ne. 1.4) .or. (gammar .ne. 1.4)) then
-                s(1,i) = 1.d0*Sl - 1.0*ustar
-                s(2,i) = 0.0*ustar
-                s(3,i) = 1.d0*Sr - 1.0*ustar
-              end if
-            
-            
-!             ! Send info to ustar_array to do the averaging
-!             ii = floor(auxl(4,i))
-!             jj = floor(auxl(5,i))
-!             ustar_array(ii,jj,1) = 0.0
-!             ustar_array(ii,jj,2) = 0.0
-!             if (gammal .ne. gammar) then ! .and. ixy .eq. 1) then
-!                 s(2,i) = 0.0
-! !                 if (ixy .eq. 1) then
-! !                   ustar_array(ii,jj,1) = ustar
-! !                 else
-! !                   ustar_array(ii,jj,2) = ustar
-! !                 end if
-!             end if     
-                       
-            
+            if (gammal .ne. gammar) then
+                s(2,i) = 0.0
+            end if
+                                   
             bl = (gammal + 1.0)/(gammal - 1.0)
             br = (gammar + 1.0)/(gammar - 1.0)
             ! Calculate densities, momentums and energys
@@ -201,6 +176,120 @@ c        j index over q variables
             wave(j,2,i) = qmr(j,i) - qml(j,i)
             wave(j,3,i) = q_r - qmr(j,i) 
         end do
+        
+          ! Force constant entropy for ghost cells
+          if (gammal .ne. gammar) then
+              rhor_gho = rho_l*(pr/pl)**(1.0/gammal)
+              rhol_gho = rho_r*(pl/pr)**(1.0/gammar)
+          
+! EXACT SOLVER__________________________________________
+              ! Newton's ,method for two Riemman problems
+              pstar = 0.5*(pl + pr)
+              pold = pstar + 10
+              do while (abs(pstar - pold) > 0.0001)
+                pold = pstar
+                CALL phi_exact(gammal,gammar,pr,pl,rhor_gho,rho_l,ul,ur,
+     & pinfl,pinfr,pstar,phi,phi_prime,rhos_l,rhos_r_dummy,ustar)
+                pstar = pstar - phi/phi_prime
+              end do
+              
+              pstar2 = 0.5*(pl + pr)
+              pold = pstar2 + 10
+              do while (abs(pstar2 - pold) > 0.0001)
+                pold = pstar2
+                CALL phi_exact(gammal,gammar,pr,pl,rho_r,rhol_gho,ul,ur,
+     & pinfl,pinfr,pstar2,phi,phi_prime,rhos_l_dummy,rhos_r,ustar2)
+                pstar2 = pstar2 - phi/phi_prime
+              end do
+              
+!               if (pstar .ne. pstar2) then
+!                 print*, rhos_l,rhos_r
+!               end if
+              
+!               pstar = pstar2!0.5*(pstar + pstar2)
+!               ustar = ustar2!0.5*(ustar + ustar2)
+              
+              ! Compute the speed of left and right wave (See MJ IVINGS paper)
+              betal = (pl + pinfl)*(gammal - 1.0)/(gammal + 1.0)
+              betar = (pr + pinfr)*(gammar - 1.0)/(gammar + 1.0)
+              alphal = 2.0/(rho_l*(gammal + 1.0))
+              alphar = 2.0/(rho_r*(gammar + 1.0))
+              Sl = ul - dsqrt((pstar + pinfl + betal)/alphal)/rho_l
+              Sr = ur + dsqrt((pstar2 + pinfr + betar)/alphar)/rho_r
+  !             Sl2 = min(ul - cl,ur - cr) ! u(i) - a(i)
+  !             Sr2 = max(ul + cl,ur + cr) ! u(i) + a(i),
+  !             Sl = ul - cl
+  !             Sr = ur + cr
+              
+              s(1,i) = 1.d0*Sl
+              s(2,i) = ustar
+              s(3,i) = 1.d0*Sr
+              
+              s(2,i) = 0.0
+                                    
+              bl = (gammal + 1.0)/(gammal - 1.0)
+              br = (gammar + 1.0)/(gammar - 1.0)
+              ! Calculate densities, momentums and energys
+              qml(1,i) = rhos_l !rho_l*(1 + bl*pstar/pl)/(pstar/pl + bl)
+              qmr(1,i) = rhos_r !rho_r*(1 + br*pstar/pr)/(pstar/pr + br)
+              qml(mu,i) = qml(1,i)*ustar
+              qmr(mu,i) = qmr(1,i)*ustar2
+              qml(mv,i) = qml(1,i)*vl !*rho_l*(Sl - ul)/(Sl - ustar)
+              qmr(mv,i) = qmr(1,i)*vr!*rho_r*(Sr - ur)/(Sr - ustar)
+              qml(4,i) = (pstar + gammal*pinfl)/(gammal - 1.0) + 
+     & 0.5*(qml(mu,i)**2 + qml(mv,i)**2)/qml(1,i)
+              qmr(4,i) = (pstar2 + gammar*pinfr)/(gammar - 1.0) + 
+     & 0.5*(qmr(mu,i)**2 + qmr(mv,i)**2)/qmr(1,i)
+! _____________________________________________________________________
+
+! ! HLLC SOLVER FOR INTERFACE
+!             cl = dsqrt(gammal*(pl + pinfl)/rho_l)
+!             cr = dsqrt(gammar*(pr + pinfr)/rho_r)
+!             
+!             Sl = min(ul - cl,ur - cr)
+!             Sr = max(ul + cl,ur + cr)
+!             s(1,i) = 1.d0*Sl
+!             s(3,i) = 1.d0*Sr
+! 
+!             Sm1 = pr - pl + rhor_gho*ur*(ur - Sr) - rho_l*ul*(ul - Sl) 
+!             Sm1 = Sm1/(rhor_gho*(ur - Sr) - rho_l*(ul - Sl))
+! 
+!             Sm2 = pr - pl + rhor_gho*ur*(ur - Sr) - rho_l*ul*(ul - Sl) 
+!             Sm2 = Sm2/(rhor_gho*(ur - Sr) - rho_l*(ul - Sl))
+!                       
+!             Sm = 0.5*(Sm1+Sm2)
+!             s(2,i) = 0.0!*(Sm1+Sm2)
+!          
+!          ! Calculate ql* and qr* HLLC middle states (without pressure term)
+!          do j=1,meqn
+!               qml(j,i) = rho_l*(Sl - ul)/(Sl - Sm1)
+!               qmr(j,i) = rho_r*(Sr - ur)/(Sr - Sm2)
+!          end do
+!          
+!          ! Add multiplicative terms to momentum ones
+!          qml(mu,i) = Sm1*qml(mu,i)
+!          qmr(mu,i) = Sm2*qmr(mu,i)
+!          qml(mv,i) = vl*qml(mv,i)
+!          qmr(mv,i) = vr*qmr(mv,i)
+!          ! Add second terms to energy one (see Toro pg. 325)
+!          qml(4,i) = qml(4,i)*(qr(4,i-1)/rho_l + 
+!      & (Sm1 - ul)*(Sm1 + pl/(rho_l*(Sl - ul))))
+!          qmr(4,i) = qmr(4,i)*(ql(4,i)/rho_r + 
+!      & (Sm2 - ur)*(Sm2 + pr/(rho_r*(Sr - ur))))
+! ! _____________________________________________________________________
+          
+!   c        # Compute the 3 waves.
+!   c        j index over q variables
+             do j=1,meqn
+                q_l = qr(j,i-1)
+                q_r = ql(j,i)
+                wave(j,1,i) = qml(j,i) - q_l
+                wave(j,2,i) = qmr(j,i) - qml(j,i)
+                wave(j,3,i) = q_r - qmr(j,i) 
+             end do
+
+!           
+          end if
          
    20    continue
  

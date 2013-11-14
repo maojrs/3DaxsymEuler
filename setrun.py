@@ -98,7 +98,7 @@ def setrun(claw_pkg='classic'):
     clawdata.num_eqn = 4
 
     # Number of auxiliary variables in the aux array (initialized in setaux)
-    clawdata.num_aux = 4
+    clawdata.num_aux = 5
     
     # Index of aux array corresponding to capacity function, if there is one:
     clawdata.capa_index = 0
@@ -134,8 +134,8 @@ def setrun(claw_pkg='classic'):
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 800 #300 #200 #50
-        clawdata.tfinal = 0.0006 #0.0002 #0.0015 #0.0002 #0.0003 #0.0004 #0.03 #0.01 #0.050000
+        clawdata.num_output_times = 300#400 #300 #200 #50
+        clawdata.tfinal = 0.0002 #0.00020 #0.0002 #0.0015 #0.0002 #0.0003 #0.0004 #0.03 #0.01 #0.050000
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -184,12 +184,12 @@ def setrun(claw_pkg='classic'):
     clawdata.dt_max = 1.000000e+99
     
     # Desired Courant number if variable dt used 
-    clawdata.cfl_desired = 0.35000 #0.200000 #0.900000
+    clawdata.cfl_desired = 0.4000 #0.200000 #0.900000
     # max Courant number to allow without retaking step with a smaller dt:
-    clawdata.cfl_max = 0.450000 #0.350000 #1.000000
+    clawdata.cfl_max = 0.490000 #0.350000 #1.000000
     
     # Maximum number of time steps to allow between output times:
-    clawdata.steps_max = 2000 #500
+    clawdata.steps_max = 1000 #500
 
 
     # ------------------
@@ -220,7 +220,7 @@ def setrun(claw_pkg='classic'):
     #   2 or 'superbee' ==> superbee
     #   3 or 'vanleer'  ==> van Leer
     #   4 or 'mc'       ==> MC limiter
-    clawdata.limiter = [4, 4, 4]
+    clawdata.limiter = [1, 1, 1]
     
     clawdata.use_fwaves = False    # True ==> use f-wave version of algorithms
     

@@ -15,7 +15,7 @@ c     # existence may be required by some compilers.
       do i=1-mbc,mx+mbc 
         xcell = xlower + (i-0.5d0)*dx 
         do j=1-mbc,my+mbc 
-            r = ylower + (j-0.5d0)*dy +5.d0*dy ! Artificil extra to avoid singular source terms
+            r = ylower + (j-0.5d0)*dy + 5.d0*dy ! Artificil extra to avoid almost singular stiif source terms
             ! Equation of state variables             
             gamma = aux(1,i,j)
             pinf = aux(2,i,j)
@@ -26,41 +26,41 @@ c     # existence may be required by some compilers.
             yt(3) = q(3,i,j)
             yt(4) = q(4,i,j)
             
-            ! Do Trapezoidal method only (works the best so far)(see research notebook)
+            ! DO TR-BDF2 (See mini-research notebook)
+            ! Trapezoidal part (just as before)
             uz = yt(2)/yt(1)
             ur = yt(3)/yt(1)
             ekt = 0.5*yt(1)*(uz**2 + ur**2)
             pt = (gamma - 1.0)*(yt(4) - ekt) - gamma*pinf
-            del = dt*ur/(2.0*r)
-            yout(1) = yt(1)*(1.0 - del)/(1.0 + del)
-            yout(2) = yt(2)*(1.0 - del)/(1.0 + del)
-            yout(3) = yout(1)*ur
-            yout(4) = yt(4) - del*(yt(4) + pt - (gamma - 1.0)*ekt - 
+            del = dt*ur/(4.0*r)
+            ys(1) = yt(1)*(1.0 - del)/(1.0 + del)
+            ys(2) = yt(2)*(1.0 - del)/(1.0 + del)
+            ys(3) = ys(1)*ur
+            eks = 0.5*(ys(2)**2 + ys(3)**2)/ys(1)
+            ys(4) = yt(4) - del*(yt(4) + pt - (gamma - 1.0)*eks - 
      & gamma*pinf)
+            ys(4) = ys(4)/(1.0 + gamma*del)
+            ! BDF part
+            del = ur*dt/(3.0*r)
+            yout(1) = (4.0*ys(1)/3.0 - yt(1)/3.0)/(1.0 + del)
+            yout(2) = (4.0*ys(2)/3.0 - yt(2)/3.0)/(1.0 + del)
+            yout(3) = yout(1)*ur
+            ekout = 0.5*(yout(2)**2 + yout(3)**2)/yout(1)
+            yout(4) = (4.0*ys(4)/3.0 - yt(4)/3.0 - del*((1.0 - gamma)*
+     & ekout - gamma*pinf))
             yout(4) = yout(4)/(1.0 + gamma*del)
             
-!             ! DO TR-BDF2 (See mini-research notebook)
-!             ! Trapezoidal part (just as before)
+!             ! Do Trapezoidal method only (works the best so far)(see research notebook)
 !             uz = yt(2)/yt(1)
 !             ur = yt(3)/yt(1)
 !             ekt = 0.5*yt(1)*(uz**2 + ur**2)
 !             pt = (gamma - 1.0)*(yt(4) - ekt) - gamma*pinf
-!             del = dt*ur/(4.0*r)
-!             ys(1) = yt(1)*(1.0 - del)/(1.0 + del)
-!             ys(2) = yt(2)*(1.0 - del)/(1.0 + del)
-!             ys(3) = ys(1)*ur
-!             ys(4) = yt(4) - del*(yt(4) + pt - (gamma - 1.0)*ekt - 
-!      & gamma*pinf)
-!             ys(4) = ys(4)/(1.0 + gamma*del)
-!             ! BDF part
-!             del = ur*dt/(3.0*r)
-!             fr = 1.0/3.0
-!             yout(1) = fr*(4.0*ys(1) - yt(1))/(1.0 + del)
-!             yout(2) = fr*(4.0*ys(2) - yt(2))/(1.0 + del)
+!             del = dt*ur/(2.0*r)
+!             yout(1) = yt(1)*(1.0 - del)/(1.0 + del)
+!             yout(2) = yt(2)*(1.0 - del)/(1.0 + del)
 !             yout(3) = yout(1)*ur
-!             ek_out = 0.5*(yout(2)**2 + yout(3)**2)/yout(1)
-!             yout(4) = fr*(4*ys(4) - yt(1) - (dt*ur/r)*(1 - gamma)*
-!      & ek_out - gamma*pinf)
+!             yout(4) = yt(4) - del*(yt(4) + pt - (gamma - 1.0)*ekt - 
+!      & gamma*pinf)
 !             yout(4) = yout(4)/(1.0 + gamma*del)
       
             
@@ -79,16 +79,16 @@ c     # existence may be required by some compilers.
 !             yout(4) = yout(4)/(1 - dt*gamma*ur_out/r)
             
             
-!             ! Not good for stiff problems
-!             ! Do runge kutta fourth order 
-!             CALL rk4(yt,yout,rcell,t,dt,gamma,pinf)
-!             
+!           ! Not good for stiff problems
+!           ! Do runge kutta fourth order 
+!           CALL rk4(yt,yout,rcell,t,dt,gamma,pinf) 
             q(1,i,j) = yout(1)
             q(2,i,j) = yout(2)
             q(3,i,j) = yout(3)
             q(4,i,j) = yout(4)
         end do
       end do
+      
       return
       end
 

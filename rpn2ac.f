@@ -239,12 +239,17 @@ c     # Compute Roe-averaged quantities:
         ! Force zero speed at contact discontinuity
         ! makes wave two not move without affecting it's influence
         ! to wave 1 and 3 given by Sm
-         if (gammal .ne. gammar) then
+         if (gammal .ne. 1.4 .or. gammar .ne. 1.4) then
             !Sm = 0.0
-            go to 10
+!             go to 10
             s(2,i) = 0.0
+            Sl = Sl - ustar
+            Sr = Sr - ustar
+            s(1,i) = 1.d0*Sl
+            s(3,i) = 1.d0*Sr
           end if
-
+!           s(2,i) = 0.0
+          
          ! Calculate ql* and qr* HLLC middle states (without pressure term)
          do j=1,meqn
              qml(j,i) = rho_l*(Sl - ul)/(Sl - Sm)
@@ -288,89 +293,89 @@ c        j index over q variables
  
           ! Do almost EXACT RIEMANN SOLVER for interface
    10     continue
-          if (gammal .ne. gammar) then
-  !           ! Newton's ,method
-              pstar = min(pl,pr) + 0.9*(max(pl,pr) - min(pl,pr)) !0.5*(pl + pr)
-              pold = pstar + 10
-              do while (abs(pstar - pold) > 0.0001)
-                pold = pstar
-                CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,
-     & pinfl,pinfr,pstar,phi,phi_prime,rhos_l,rhos_r,ustar)
-                pstar = pstar - phi/phi_prime
-              end do
-
-!             ! Bisection method to find pressure in exact solution
-!             pold = -10.0
-!             pleft = pl
-!             pright = pr
-!             pstar = 0.5*(pleft + pright)
-!             do while (abs(pstar - pold) > 0.01)
-!               pold = pstar
-!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
-!      & pinfr,pleft,phil,phi_prime,rhos_l,rhos_r,ustar)
-!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
-!      & pinfr,pright,phir,phi_prime,rhos_l,rhos_r,ustar)
-!               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
-!      & pinfr,pstar,phi,phi_prime,rhos_l,rhos_r,ustar)
-!               if (phi*phil > 0) then
-!                 pleft = pstar
-!               else
-!                 pright = pstar
-!               end if
-!               pstar = 0.5*(pleft + pright)
-!             end do
-              
-              ! Compute the speed of left and right HLLC wave
-            betal = (pl + pinfl)*(gammal - 1.0)/(gammal + 1.0)
-            betar = (pr + pinfr)*(gammar - 1.0)/(gammar + 1.0)
-            alphal = 2.0/(rho_l*(gammal + 1.0))
-            alphar = 2.0/(rho_r*(gammar + 1.0))
-            Sl = ul - dsqrt((pstar + pinfl + betal)/alphal)/rho_l
-            Sr = ur + dsqrt((pstar + pinfr + betar)/alphar)/rho_r
-
-!             ustar = 0.0
-
-            s(1,i) = 1.d0*Sl
-            s(2,i) = 1.d0*ustar
-            s(3,i) = 1.d0*Sr              
-            
-            bl = (gammal + 1.0)/(gammal - 1.0)
-            br = (gammar + 1.0)/(gammar - 1.0)
+!           if (gammal .ne. gammar) then
+!   !           ! Newton's ,method
+!               pstar = min(pl,pr) + 0.9*(max(pl,pr) - min(pl,pr)) !0.5*(pl + pr)
+!               pold = pstar + 10
+!               do while (abs(pstar - pold) > 0.0001)
+!                 pold = pstar
+!                 CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,
+!      & pinfl,pinfr,pstar,phi,phi_prime,rhos_l,rhos_r,ustar)
+!                 pstar = pstar - phi/phi_prime
+!               end do
+! 
+! !             ! Bisection method to find pressure in exact solution
+! !             pold = -10.0
+! !             pleft = pl
+! !             pright = pr
+! !             pstar = 0.5*(pleft + pright)
+! !             do while (abs(pstar - pold) > 0.01)
+! !               pold = pstar
+! !               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
+! !      & pinfr,pleft,phil,phi_prime,rhos_l,rhos_r,ustar)
+! !               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
+! !      & pinfr,pright,phir,phi_prime,rhos_l,rhos_r,ustar)
+! !               CALL phi_exact(gammal,gammar,pr,pl,rho_r,rho_l,pinfl,
+! !      & pinfr,pstar,phi,phi_prime,rhos_l,rhos_r,ustar)
+! !               if (phi*phil > 0) then
+! !                 pleft = pstar
+! !               else
+! !                 pright = pstar
+! !               end if
+! !               pstar = 0.5*(pleft + pright)
+! !             end do
+!               
+!               ! Compute the speed of left and right HLLC wave
+!             betal = (pl + pinfl)*(gammal - 1.0)/(gammal + 1.0)
+!             betar = (pr + pinfr)*(gammar - 1.0)/(gammar + 1.0)
+!             alphal = 2.0/(rho_l*(gammal + 1.0))
+!             alphar = 2.0/(rho_r*(gammar + 1.0))
+!             Sl = ul - dsqrt((pstar + pinfl + betal)/alphal)/rho_l
+!             Sr = ur + dsqrt((pstar + pinfr + betar)/alphar)/rho_r
+! 
+! !             ustar = 0.0
+! 
+!             s(1,i) = 1.d0*Sl
+!             s(2,i) = 1.d0*ustar
+!             s(3,i) = 1.d0*Sr              
 !             
-!             if (isnan(pstar)) then
-!                 print*, pl,pr
-!                 print*,1
-!                 read(*,*)
-!             end if
-            
-              ! Calculate densities, momentums and energys 
-            qml(1,i) = rhos_l !rho_l*(1 + bl*pstar/pl)/(pstar/pl + bl)
-            qmr(1,i) = rhos_r !rho_r*(1 + br*pstar/pr)/(pstar/pr + br)
-            qml(mu,i) = qml(1,i)*ustar
-            qmr(mu,i) = qmr(1,i)*ustar
-            qml(mv,i) = qml(1,i)*vl!*rho_l*(Sl - ul)/(Sl - ustar)
-            qmr(mv,i) = qmr(1,i)*vr!*rho_r*(Sr - ur)/(Sr - ustar)
-            qml(4,i) = (pstar + gammal*pinfl)/(gammal - 1.0) + 
-     & 0.5*(qml(mu,i)**2 + qml(mv,i)**2)/qml(1,i)
-            qmr(4,i) = (pstar + gammar*pinfr)/(gammar - 1.0) + 
-     & 0.5*(qmr(mu,i)**2 + qmr(mv,i)**2)/qmr(1,i)
-
-!               qml(4,i) = rhos_l*(qr(4,i-1)/rho_l + 
-!      & (ustar - ul)*(ustar + pl/(rho_l*(Sl - ul))))
-!          qmr(4,i) = rhos_r*(ql(4,i)/rho_r + 
-!      & (ustar - ur)*(ustar + pr/(rho_r*(Sr - ur))))
-              
-          
-c        # Compute the 3 waves.
-c        j index over q variables
-          do j=1,meqn
-              q_l = qr(j,i-1)
-              q_r = ql(j,i)
-              wave(j,1,i) = qml(j,i) - q_l
-              wave(j,2,i) = qmr(j,i) - qml(j,i)
-              wave(j,3,i) = q_r - qmr(j,i) 
-          end do
-         end if
+!             bl = (gammal + 1.0)/(gammal - 1.0)
+!             br = (gammar + 1.0)/(gammar - 1.0)
+! !             
+! !             if (isnan(pstar)) then
+! !                 print*, pl,pr
+! !                 print*,1
+! !                 read(*,*)
+! !             end if
+!             
+!               ! Calculate densities, momentums and energys 
+!             qml(1,i) = rhos_l !rho_l*(1 + bl*pstar/pl)/(pstar/pl + bl)
+!             qmr(1,i) = rhos_r !rho_r*(1 + br*pstar/pr)/(pstar/pr + br)
+!             qml(mu,i) = qml(1,i)*ustar
+!             qmr(mu,i) = qmr(1,i)*ustar
+!             qml(mv,i) = qml(1,i)*vl!*rho_l*(Sl - ul)/(Sl - ustar)
+!             qmr(mv,i) = qmr(1,i)*vr!*rho_r*(Sr - ur)/(Sr - ustar)
+!             qml(4,i) = (pstar + gammal*pinfl)/(gammal - 1.0) + 
+!      & 0.5*(qml(mu,i)**2 + qml(mv,i)**2)/qml(1,i)
+!             qmr(4,i) = (pstar + gammar*pinfr)/(gammar - 1.0) + 
+!      & 0.5*(qmr(mu,i)**2 + qmr(mv,i)**2)/qmr(1,i)
+! 
+! !               qml(4,i) = rhos_l*(qr(4,i-1)/rho_l + 
+! !      & (ustar - ul)*(ustar + pl/(rho_l*(Sl - ul))))
+! !          qmr(4,i) = rhos_r*(ql(4,i)/rho_r + 
+! !      & (ustar - ur)*(ustar + pr/(rho_r*(Sr - ur))))
+!               
+!           
+! c        # Compute the 3 waves.
+! c        j index over q variables
+!           do j=1,meqn
+!               q_l = qr(j,i-1)
+!               q_r = ql(j,i)
+!               wave(j,1,i) = qml(j,i) - q_l
+!               wave(j,2,i) = qmr(j,i) - qml(j,i)
+!               wave(j,3,i) = q_r - qmr(j,i) 
+!           end do
+!          end if
          
    20    continue
  

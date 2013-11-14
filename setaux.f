@@ -39,9 +39,9 @@ c
 !                 aux(2,i,j) = pinfwat
 !                 aux(3,i,j) = omewat
 !             end if
-            
+             
             ! Water box immersed in air
-            if ((abs(xcell) .le. 0.85) .and. (ycell .le. 0.85)) then
+            if ((abs(xcell+0.0).le.0.0085).and. (ycell.le.0.0085)) then
                 aux(1,i,j) = gammawat
                 aux(2,i,j) = pinfwat
                 aux(3,i,j) = omewat
@@ -50,6 +50,16 @@ c
                 aux(2,i,j) = pinfgas
                 aux(3,i,j) = omegas
             end if
+            
+            aux(4,i,j) = 1.0*i
+            aux(5,i,j) = 1.0*j
+            
+            
+!             if (xcell < -0.025) then
+!                 aux(4,i,j) = 1.0
+!             else
+!                 aux(4,i,j) = 0.0
+!             end if
           
         end do
       end do

@@ -10,18 +10,28 @@ c
 c     # Set initial conditions for q.
 c     # Acoustics with smooth radially symmetric profile to test accuracy
 c
+       ! for aux averaged time dependant EOS parameters in aux arrays
+!        USE auxmodule
+
        implicit double precision (a-h,o-z)
        dimension q(meqn,1-mbc:mx+mbc,1-mbc:my+mbc)
        dimension aux(maux,1-mbc:mx+mbc,1-mbc:my+mbc)
        dimension p(1-mbc:mx+mbc)
        dimension dist(500), pressure(500)
+       
 
        common /param/ gammagas, gammaplas, gammawat
        common /param/ pinfgas,pinfplas,pinfwat
        common /param/ omegas,omeplas,omewat
        common /param/ rhog,rhop,rhow
-c
+       common /param/ dx2,dy2
+
+       dx2 = 1.0*dx
+       dy2 = 1.0*dy
        pi = 4.d0*datan(1.d0)
+       
+       ! Important for averaged time dependat array
+!        CALL init_auxmodule(mx,my,mbc,maux,aux)
 
 !        do 20 i=1,mx
 !           xcell = xlower + (i-0.5d0)*dx
@@ -41,6 +51,11 @@ c
 !   20         continue
 
       open (23,file="a-pIC.dat",action="read",status="old")
+      open (21,file="a-pgauge1.dat",action="write",
+     & status="replace")
+      open (22,file="a-pgauge2.dat",action="write",
+     & status="replace")
+      open (25,file="a-pICtime.dat",action="read",status="old") 
 !       
       ! Read pressure data from file
       do i=1,500
@@ -57,20 +72,24 @@ c
       p = p0
       c0 = sqrt(gammagas*p0/rhog) 
       Egas0 = (p0 + gammagas*pinfgas)/(gammagas - 1.d0)  
-      do 150 i=1,mx
+      do 150 i=1-mbc,mx+mbc
         xcell = xlower + (i-0.5d0)*dx
-        do 151 j=1,my
+        do 151 j=1-mbc,my+mbc
           ycell = ylower + (j-0.5d0)*dy
           
-          ! Look for correct value for pressure in data file
-          ddx = dist(101) - dist(100)
-          do k=1,500
-            dist2 = (dist(k) - 10.0) 
-            if (abs(dist2 - xcell) <  ddx/2) then
-              ! Convert PSI to Pascals
-              p(i) = p0 + 6894.75729*pressure(k)!*exp(-0.1*ycell**2)
-            end if
-          end do
+!           if (xcell .le. -0.025) then
+!             p(i) = 184062.08
+!           end if
+          
+!           ! Look for correct value for pressure in data file
+!           ddx = dist(101) - dist(100)
+!           do k=1,500
+!             dist2 = (dist(k) - 10.0) 
+!             if (abs(dist2 - xcell) <  ddx/2) then
+!               ! Convert PSI to Pascals
+!               p(i) = p0 + 6894.75729*pressure(k)!*exp(-0.1*ycell**2)
+!             end if
+!           end do
           
           ! Adjust initial conditions depending if it's gas,PS or water
           if (aux(1,i,j) == gammagas) then
@@ -95,13 +114,13 @@ c
             q(1,i,j) = rhow
             q(2,i,j) = 0.d0
             q(3,i,j) = 0.d0
-            ! Make sure jump in pressure is zero again if interface in contact is plastic
+            ! Make sure jump in pressure is zero again if interface in contact is plastic SGEOS-SGEOS
     !         q(4,i,j) = -gammaplas*pinfplas + gammawat*pinfwat
     !         q(4,i,j) = q(4,i,j)+Eplas0*(gammaplas - 1.d0)/
     !      & (1.d0 - omeplas*rhop)
     !         q(4,i,j) = q(4,i,j)*(1.d0 - omewat*rhow)/(gammawat - 1.d0)
     !         
-    !         Make sure jump in pressure is zero again if interface in contact is air
+    !       Make sure jump in pressure is zero again if interface in contact is water using SGEOS-SGEOS
             q(4,i,j) = -gammagas*pinfgas + gammawat*pinfwat
             q(4,i,j) = q(4,i,j)+Egas0*(gammagas - 1.d0)/
      & (1.d0 - omegas*rhog)
