@@ -51,6 +51,13 @@ c
                 aux(3,i,j) = omegas
             end if
             
+!             ! Add hydrophone
+!             if ((abs(xcell) .le. 0.005) .and. (j .eq. 1)) then
+!                 aux(1,i,j) = gammaplas
+!                 aux(2,i,j) = pinfplas
+!                 aux(3,i,j) = omeplas
+!             end if
+            
             aux(4,i,j) = 1.0*i
             aux(5,i,j) = 1.0*j
             

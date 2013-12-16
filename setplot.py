@@ -7,6 +7,8 @@ function setplot is called to set the plot parameters.
     
 """ 
 
+# Note: To change plotted time scale, edit frametools.py in visclaw
+
 import os
 import numpy as np
 
@@ -41,6 +43,46 @@ def setplot(plotdata):
       yborder = [0.0, 0.0]
       #y[:] = [xx - gcs for xx in y]
       plot(x,y,'k',linewidth=2.0)
+      
+          # Plot outline of interface
+    def aa1D(current_data):
+      from pylab import linspace,plot,annotate,text
+      #gcs = 2.0/200.0
+      x = [-0.0085,-0.0085,0.0085,0.0085]
+      y = [-1000000,10000000,1000000,-1000000]
+      #y[:] = [xx - gcs for xx in y]
+      plot(x,y,'k',linewidth=2.0)
+      #plot(-8.0, 180000, 'vk', markersize=10) 
+      #plot(-2.0, 180000, 'vk', markersize=10) 
+      #plot(0.0, 180000, 'vk', markersize=10) 
+      #plot(2.0, 180000, 'vk', markersize=10)
+      text(-0.0075,285000,'Water',fontweight='bold',fontsize=20)
+      #text(-0.8,285000,'PS',fontweight='bold',fontsize=20)
+      text(-0.029,285000,'Air',fontweight='bold',fontsize=20)
+      text(0.0095,285000,'Air',fontweight='bold',fontsize=20)
+      
+                # Plot outline of interface
+    def aa1DPSIcm(current_data):
+      from pylab import linspace,plot,annotate,text,xlabel,ylabel
+      #gcs = 2.0/200.0
+      x = [-0.85,-0.85,0.85,0.85]
+      y = [-100,100,100,-100]
+      #y[:] = [xx - gcs for xx in y]
+      plot(x,y,'k',linewidth=2.0)
+      xlabel('cm',fontsize='16')
+      ylabel('psi',fontsize='16')
+      xcav = [-3.0,3.0]
+      ycav = [-14.334351113,-14.334351113] #Water vapour pressure for cavitation at room temp in 1atm=0 ref system
+      plot(xcav,ycav,'b--')
+      #plot(-8.0, 180000, 'vk', markersize=10) 
+      #plot(-2.0, 180000, 'vk', markersize=10) 
+      #plot(0.0, 180000, 'vk', markersize=10) 
+      #plot(2.0, 180000, 'vk', markersize=10)
+      text(-0.75,27,'Water',fontweight='bold',fontsize=20)
+      #text(-0.8,285000,'PS',fontweight='bold',fontsize=20)
+      text(-2.9,27,'Air',fontweight='bold',fontsize=20)
+      text(0.95,27,'Air',fontweight='bold',fontsize=20)
+      text(1.0,-13,'Vapor pressure',fontsize=15,color='blue')
       
     #When only using SGEOS
     def Pressure(current_data):
@@ -93,8 +135,9 @@ def setplot(plotdata):
         
          # Mirrored pressure pcolor plor
     def MirrorPressure_contour(current_data):
-        from pylab import linspace,plot,contour,contourf,annotate,text,cm,colorbar,show
-        import matplotlib.ticker as ticker 
+        from pylab import linspace,plot,pcolor,contour,contourf,annotate,text,cm,colorbar,show,xlabel,ylabel,xticks,yticks
+        import matplotlib.ticker as ticker
+        from clawpack.visclaw import colormaps as cmaps
         xx = current_data.x
         yy = current_data.y
         dy = abs(yy[1,1] - yy[1,2])
@@ -110,28 +153,148 @@ def setplot(plotdata):
         ene = q[3,:,:]           # energy
         P = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho) #/(1.0 - omega*rho)
         P = P - gamma*pinf
-        #xborder = [-0.05, 0.05, 0.05, -0.05]
-        #yborder = [0.0, 0.0, 0.02, 0.02]
-        #plot(xborder,yborder,'k',linewidth=2.0)
+        # Convert to PSI
+        P = P*0.000145038 - 14.6959488
         x = [-0.0085, -0.0085, 0.0085, 0.0085]
         x = [zz - 0.0 for zz in x]
         y = [0.0, 0.0085, 0.0085, 0.0]
         y2 = [-zz for zz in y]
-        #xborder = [-0.05, 0.05, 0.05, -0.05]
-        #yborder = [-0.02, -0.02, 0.]
         plot(x,y,'k',linewidth=2.0)
         plot(x,y2,'k',linewidth=2.0)
-        
         locator = ticker.MaxNLocator(20) # if you want no more than 10 contours 
         locator.create_dummy_axis()
-        locator.set_bounds(100000, 300000) 
+        #For Pa
+        #locator.set_bounds(90000, 300000) 
+        # For PSI
+        locator.set_bounds(-20, 30) 
         levs = locator() 
-        
+        #OTHER colormap: cmap = camps.schlieren_grays
         contourf(xx,yy-0.5*dy,P, levs, alpha=.75, cmap=cm.Blues)
         contourf(xx,-(yy-0.5*dy),P, levs,alpha=.75, cmap=cm.Blues)
-        colorbar()
+        cbar = colorbar(shrink=0.65)
+        cbar.ax.set_xlabel('psi', fontsize='16', rotation='horizontal')
+        # for PSI or Pascals
+        pcolor(xx,yy-0.5*dy,P,cmap=cm.Blues, vmin=-20, vmax=30)
+        pcolor(xx,-(yy-0.5*dy),P,cmap=cm.Blues, vmin=-20, vmax=30)
+        # Convert axis to cm
+        xxticks = np.arange(xx.min(), xx.max(), 0.01)
+        labelsx = range(xxticks.size) 
+        labelsx[:] = [x - 3 for x in labelsx]
+        xticks(xxticks, labelsx)
+        yyticks = np.arange(-yy.max(), yy.max(), 0.01)
+        labelsy = range(yyticks.size)
+        labelsy[:] = [x - 2 for x in labelsy]
+        yticks(yyticks, labelsy)
+        xlabel('cm',fontsize='16')
+        ylabel('cm',fontsize='16')
+        #pcolor(xx,yy-0.5*dy,P,cmap=cm.Blues, vmin=90000, vmax=300000)
+        #pcolor(xx,-(yy-0.5*dy),P,cmap=cm.Blues, vmin=90000, vmax=300000)
+        #colorbar()
         contour(xx,yy-0.5*dy,P,levs, colors='black', linewidth=0.5)
         contour(xx,-(yy-0.5*dy),P,levs, colors='black', linewidth=0.5)
+        
+         # Mirrored pressure and pressure slice
+    def MirrorPressurecontour_N_Pressureslice(current_data):
+        from pylab import linspace,plot,subplot,pcolor,contour,contourf,annotate,text,cm,colorbar,show,xlabel,ylabel,xticks,yticks
+        from pylab import subplots,ylim, xlim, setp,  annotate,text, get, subplot2grid, axes,gca,title
+        import matplotlib.ticker as ticker
+        from clawpack.visclaw import colormaps as cmaps
+        xx = current_data.x
+        yy = current_data.y
+        dy = abs(yy[1,1] - yy[1,2])
+        q = current_data.q   # solution when this function called
+        aux = current_data.aux
+        gamma = aux[0,:,:]
+        gamma1 = aux[0,:,:] - 1.0
+        pinf = aux[1,:,:]
+        omega = aux[2,:,:]
+        rho = q[0,:,:]           # density
+        momx = q[1,:,:]           # momentum
+        momy = q[2,:,:]
+        ene = q[3,:,:]           # energy
+        P = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho) #/(1.0 - omega*rho)
+        P = P - gamma*pinf
+        # Convert to PSI
+        P = P*0.000145038 - 14.6959488
+        x = [-0.0085, -0.0085, 0.0085, 0.0085]
+        x = [zz - 0.0 for zz in x]
+        y = [0.0, 0.0085, 0.0085, 0.0]
+        y2 = [-zz for zz in y]
+        
+        s1 = subplot2grid((5,16), (0,0), colspan=14, rowspan=3) # subplot(211)
+        plot(x,y,'k',linewidth=2.0)
+        plot(x,y2,'k',linewidth=2.0)
+        locator = ticker.MaxNLocator(20) # if you want no more than 10 contours 
+        locator.create_dummy_axis()
+        #For Pa
+        #locator.set_bounds(90000, 300000) 
+        # For PSI
+        locator.set_bounds(-20, 30) 
+        levs = locator()
+        #f, (ax1, ax2) = subplots(2, sharex=True,sharey=True,subplot_kw=dict(adjustable='datalim', aspect='equal'))
+        #OTHER colormap: cmap = camps.schlieren_grays
+        cont1 = contourf(xx,yy-0.5*dy,P, levs, alpha=.75, cmap=cm.Blues)
+        cont2 = contourf(xx,-(yy-0.5*dy),P, levs,alpha=.75, cmap=cm.Blues)
+        # for PSI or Pascals
+        pcolor(xx,yy-0.5*dy,P,cmap=cm.Blues, vmin=-20, vmax=30)
+        pcolor(xx,-(yy-0.5*dy),P,cmap=cm.Blues, vmin=-20, vmax=30)
+        s1.set_xlim([-0.03,0.03])
+        s1.set_ylim([-0.02,0.02])
+        # Convert axis to cm
+        xxticks = np.arange(xx.min(), xx.max(), 0.01)
+        labelsx = range(0)#range(xxticks.size) 
+        labelsx[:] = [x - 3 for x in labelsx]
+        xticks(xxticks, labelsx)
+        yyticks = np.arange(-yy.max(), yy.max(), 0.01)
+        labelsy = range(yyticks.size)
+        labelsy[:] = [x - 2 for x in labelsy]
+        yticks(yyticks, labelsy)
+        #xlabel('cm',fontsize='13',fontweight='bold')
+        ylabel('cm',fontsize='13',fontweight='bold')
+        title('Pressure contours (2D) & pressure slice (1D)', fontweight='bold')
+        #pcolor(xx,yy-0.5*dy,P,cmap=cm.Blues, vmin=90000, vmax=300000)
+        #pcolor(xx,-(yy-0.5*dy),P,cmap=cm.Blues, vmin=90000, vmax=300000)
+        #colorbar()
+        contour(xx,yy-0.5*dy,P,levs, colors='black', linewidth=0.5)
+        contour(xx,-(yy-0.5*dy),P,levs, colors='black', linewidth=0.5)
+        
+        s2 = subplot2grid((5,16), (3,0), colspan=14,rowspan=2) #subplot(212)
+        x_slice, P_slice = xsec(current_data)
+        plot(x_slice,P_slice, 'k-')
+        s2.set_xlim([-3,3])
+        s2.set_ylim([-20,30])
+        #ax1.ylim(-20,30)
+        #s2.set_xlim([-3.0,3.0])
+        #s2.set_ylim([-20,30])
+        #gcs = 2.0/200.0
+        x = [-0.85,-0.85,0.85,0.85]
+        y = [-100,100,100,-100]
+        #y[:] = [xx - gcs for xx in y]
+        plot(x,y,'k',linewidth=2.0)
+        xlabel('cm',fontsize='13',fontweight='bold')
+        ylabel('psi',fontsize='13',fontweight='bold')
+        #title('Pressure slice')
+        xcav = [-3.0,3.0]
+        ycav = [-14.334351113,-14.334351113] #Water vapour pressure for cavitation at room temp in 1atm=0 ref system
+        plot(xcav,ycav,'b--')
+        #plot(-8.0, 180000, 'vk', markersize=10) 
+        #plot(-2.0, 180000, 'vk', markersize=10) 
+        #plot(0.0, 180000, 'vk', markersize=10) 
+        #plot(2.0, 180000, 'vk', markersize=10)
+        text(-0.75,25,'Water',fontweight='bold',fontsize=13)
+        #text(-0.8,285000,'PS',fontweight='bold',fontsize=20)
+        text(-2.9,25,'Air',fontweight='bold',fontsize=13)
+        text(0.95,25,'Air',fontweight='bold',fontsize=13)
+        text(1.2,-13,'Vapor pressure',fontweight='bold',fontsize=13,color='blue')
+        
+        s3 = subplot2grid((5,16), (0,15), rowspan=5)
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        divider = make_axes_locatable(gca())
+        cax = divider.append_axes("right", "5%", pad="3%")
+        cax.axis('off')
+        cbar = colorbar(cont1,cax=s3) #,orientation='horizontal') #, shrink=0.99) #,location='eastoutside') #orientation='horizontal')
+        cbar.ax.set_xlabel('psi', fontsize='13', fontweight='bold', rotation='horizontal')
+        
 
     # Figure for Density
     # -------------------
@@ -242,6 +405,7 @@ def setplot(plotdata):
     plotitem = plotaxes.new_plotitem(plot_type='2d_pcolor')
     plotitem.pcolor_cmin = 90000
     plotitem.pcolor_cmax = 300000
+    #plotitem.pcolor_cmap = 'schlieren'
     plotitem.plot_var = Pressure  # defined above
     #plotitem.plotstyle = '-o'
     #plotitem.color = 'r'
@@ -287,8 +451,11 @@ def setplot(plotdata):
     plotfigure = plotdata.new_plotfigure(name='Pressure slice', figno=6)
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = [-0.03,0.03] #[-3,3] #[-8.5,16] #'auto' -16
-    plotaxes.ylimits = [90000,300000]
+    # Axes for m vs Pa or cm vs PSI
+    #plotaxes.xlimits = [-0.03,0.03] #[-3,3] #[-8.5,16] #'auto' -16
+    #plotaxes.ylimits = [0.00000,300000]
+    plotaxes.xlimits = [-3.0,3.0]
+    plotaxes.ylimits = [-20,30]
     plotaxes.title = 'Pressure slice'
     plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
 
@@ -311,11 +478,59 @@ def setplot(plotdata):
         ene_slice = ravel(q[3,:,:])[ij]
         P_slice = (gamma_slice - 1.0)*(ene_slice - 0.5*(momx_slice**2 + momy_slice**2)/rho_slice)
         P_slice = P_slice - gamma_slice*pinf_slice
+        # Convert to Psi and centimeters
+        P_slice = P_slice*0.000145038 - 14.6959488
+        x_slice = 100*x_slice
         return x_slice, P_slice
 
     plotitem.map_2d_to_1d = xsec
     plotitem.plotstyle = '-kx'
     plotitem.kwargs = {'markersize':3}
+    
+    plotaxes.afteraxes = aa1DPSIcm
+    
+    
+    # Pressure contour(2D) and pressure slice(1D) in one figure
+    plotfigure = plotdata.new_plotfigure(name='Contour & Slice', figno=7)
+
+    # Set up for axes in this figure:
+    plotaxes = plotfigure.new_plotaxes()
+    plotaxes.xlimits = [-3,3] #[-3,3] #[-8.5,16] #'auto' -16
+    plotaxes.ylimits = [-20,30]#[-5,5]
+    plotaxes.title = 'Pressure'
+    #plotaxes.scaled = True      # so aspect ratio is 1
+    
+    plotaxes.afteraxes = MirrorPressurecontour_N_Pressureslice    
+
+
+   ### Figure for Pressure contour and pressure slice in one figure
+    ### -------------------
+    
+    #plotfigure = plotdata.new_plotfigure(name='Pressure contour and slice', figno=7)
+
+    ## Set up for axes in this sub-figure:
+    #plotaxes = plotfigure.new_plotaxes()
+    #plotaxes.axescmd = 'subplot(211)'
+    #plotaxes.xlimits = 'auto' #[-3,3] #[-8.5,16] #'auto' -16
+    #plotaxes.ylimits = [-0.02,0.02]#[-5,5]
+    #plotaxes.title = 'Pressure'
+    ##plotaxes.scaled = True      # so aspect ratio is 1
+    
+    #plotaxes.afteraxes = MirrorPressure_contour2
+
+    ## Set up for axes in this subfigure:
+    #plotaxes = plotfigure.new_plotaxes()
+    #plotaxes.axescmd = 'subplot(212)'
+    #plotaxes.xlimits = 'auto' #[-3,3] #[-8.5,16] #'auto' -16
+    #plotaxes.ylimits = [-20,30]
+    #plotaxes.title = 'Pressure slice'
+    #plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+
+    #plotitem.map_2d_to_1d = xsec
+    #plotitem.plotstyle = '-kx'
+    #plotitem.kwargs = {'markersize':3}
+    
+    #plotaxes.afteraxes = aa1DPSIcm
 
 
       ## Figure for Something slice
@@ -353,7 +568,7 @@ def setplot(plotdata):
 
     plotdata.printfigs = True                # print figures
     plotdata.print_format = 'png'            # file format
-    plotdata.print_framenos = 'all'          # list of frames to print
+    plotdata.print_framenos = 'all'          # list of frames to print # [54,90,95,110,126,171,186,199,290]
     plotdata.print_fignos = 'all'            # list of figures to print
     plotdata.html = True                     # create html files of plots?
     plotdata.html_homelink = '../README.html'   # pointer for top of index

@@ -51,9 +51,13 @@ c
 !   20         continue
 
       open (23,file="a-pIC.dat",action="read",status="old")
-      open (21,file="a-pgauge1.dat",action="write",
+      open (11,file="a-pgauge1.dat",action="write",
      & status="replace")
-      open (22,file="a-pgauge2.dat",action="write",
+      open (12,file="a-pgauge2.dat",action="write",
+     & status="replace")
+      open (13,file="a-pgauge3.dat",action="write",
+     & status="replace")
+      open (14,file="a-pgauge4.dat",action="write",
      & status="replace")
       open (25,file="a-pICtime.dat",action="read",status="old") 
 !       
@@ -69,9 +73,27 @@ c
 !       rhop = 1050.0 !kg/m^3
 !       rhow = 1000.0 !kg/m^3
       p0 = 101325.d0 !
-      p = p0
+      p = p0      ! Energy in water an plastic in air-water-plastic arrangement
+      EgwpWat = (Egas0*(gammagas - 1.d0) - gammagas*pinfgas
+     & + gammawat*pinfwat)/(gammawat - 1.d0)         
+      EgwpPlas = (EgwpWat*(gammawat - 1.d0) - gammawat*pinfwat
+     & + gammaplas*pinfplas)/(gammaplas - 1.d0)   
       c0 = sqrt(gammagas*p0/rhog) 
+      
+      ! Defines jump in energies to make pressure equal accross interfaces using SGEOS
+      ! Setady state gas Energy
       Egas0 = (p0 + gammagas*pinfgas)/(gammagas - 1.d0)  
+      ! Energy in water an plastic in air-water-plastic arrangement
+      EgwpWat = (Egas0*(gammagas - 1.d0) - gammagas*pinfgas
+     & + gammawat*pinfwat)/(gammawat - 1.d0)         
+      EgwpPlas = (EgwpWat*(gammawat - 1.d0) - gammawat*pinfwat
+     & + gammaplas*pinfplas)/(gammaplas - 1.d0)   
+      ! Energy in water an plastic in air-plastic-water arrangement
+      EgpwPlas = (Egas0*(gammagas - 1.d0) - gammagas*pinfgas
+     & + gammaplas*pinfplas)/(gammaplas - 1.d0)         
+      EgpwWat = (EgpwPlas*(gammaplas - 1.d0) - gammaplas*pinfplas
+     & + gammaat*pinfwat)/(gammawat - 1.d0)   
+      
       do 150 i=1-mbc,mx+mbc
         xcell = xlower + (i-0.5d0)*dx
         do 151 j=1-mbc,my+mbc
@@ -100,31 +122,21 @@ c
             !q(2,i,j) = 0.d0
             q(4,i,j) = (p(i) + gammagas*pinfgas)/(gammagas - 1.0) +
      & (q(2,i,j)**2 + q(3,i,j)**2)/(2.0*q(1,i,j))
-          else if (aux(1,i,j) == gammaplas) then
+     
+         else if (aux(1,i,j) == gammaplas) then
             q(1,i,j) = rhop
             q(2,i,j) = 0.d0
             q(3,i,j) = 0.d0
-            ! make sure pressure jump is zero across interface using SGEOS
-            q(4,i,j) = gammaplas*pinfplas - gammagas*pinfgas
-            q(4,i,j) = q(4,i,j) + Egas0*(gammagas - 1.d0)/
-     & (1.d0 - omegas*rhog)
-            q(4,i,j) = q(4,i,j)*(1.d0 - omeplas*rhop)/(gammaplas - 1.d0)
-            Eplas0 = 1.0*q(4,i,j) !Needed to compute energy in water state 
-          else if (aux(1,i,j) == gammawat) then
+            ! make sure pressure jump is zero across interface using SGEOS (check correct order of interfaces)
+            q(4,i,j) = 1.d0*EgwpPlas
+     
+         else if (aux(1,i,j) == gammawat) then
             q(1,i,j) = rhow
             q(2,i,j) = 0.d0
             q(3,i,j) = 0.d0
-            ! Make sure jump in pressure is zero again if interface in contact is plastic SGEOS-SGEOS
-    !         q(4,i,j) = -gammaplas*pinfplas + gammawat*pinfwat
-    !         q(4,i,j) = q(4,i,j)+Eplas0*(gammaplas - 1.d0)/
-    !      & (1.d0 - omeplas*rhop)
-    !         q(4,i,j) = q(4,i,j)*(1.d0 - omewat*rhow)/(gammawat - 1.d0)
-    !         
-    !       Make sure jump in pressure is zero again if interface in contact is water using SGEOS-SGEOS
-            q(4,i,j) = -gammagas*pinfgas + gammawat*pinfwat
-            q(4,i,j) = q(4,i,j)+Egas0*(gammagas - 1.d0)/
-     & (1.d0 - omegas*rhog)
-            q(4,i,j) = q(4,i,j)*(1.d0 - omewat*rhow)/(gammawat - 1.d0)
+            ! make sure pressure jump is zero across interface using SGEOS (check correct order of interfaces)
+            q(4,i,j) = 1.d0*EgwpWat
+
           end if
   151    continue	  
   150  continue

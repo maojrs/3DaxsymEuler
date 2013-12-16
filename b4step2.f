@@ -32,7 +32,7 @@ c
       
       ! GAUGE 1
       xcell = -0.015
-      ycell = 0.005
+      ycell = 0.0005
       i = floor((xcell - xlower)/dx + 0.5)
       j = floor((ycell - ylower)/dy + 0.5)
 
@@ -48,11 +48,11 @@ c
       p = p - gamma*pinf 
      
       ! Write Gauge data to file
-      write (21,*) t, p
+      write (11,*) t, p
       
       ! GAUGE 2
-      xcell = 0.0
-      ycell = 0.005
+      xcell = -0.005
+      ycell = 0.0005
       i = floor((xcell - xlower)/dx + 0.5)
       j = floor((ycell - ylower)/dy + 0.5)
 
@@ -68,7 +68,47 @@ c
       p = p - gamma*pinf 
      
       ! Write Gauge data to file
-      write (22,*) t, p
+      write (12,*) t, p
+
+      ! GAUGE 3
+      xcell = 0.0
+      ycell = 0.0005
+      i = floor((xcell - xlower)/dx + 0.5)
+      j = floor((ycell - ylower)/dy + 0.5)
+
+      ! Calculate pressure at point xcell
+      gamma = aux(1,i,j)
+      gamma1 = aux(1,i,j) - 1.0
+      pinf = aux(2,i,j)
+      rho = q(1,i,j)           ! density
+      momx = q(2,i,j)           ! momentum
+      momy = q(3,i,j)
+      ene = q(4,i,j)           ! energy
+      p = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho)
+      p = p - gamma*pinf 
+     
+      ! Write Gauge data to file
+      write (13,*) t, p
+
+      ! GAUGE 4
+      xcell = 0.005
+      ycell = 0.0005
+      i = floor((xcell - xlower)/dx + 0.5)
+      j = floor((ycell - ylower)/dy + 0.5)
+
+      ! Calculate pressure at point xcell
+      gamma = aux(1,i,j)
+      gamma1 = aux(1,i,j) - 1.0
+      pinf = aux(2,i,j)
+      rho = q(1,i,j)           ! density
+      momx = q(2,i,j)           ! momentum
+      momy = q(3,i,j)
+      ene = q(4,i,j)           ! energy
+      p = gamma1*(ene - 0.5*(momx*momx + momy*momy)/rho)
+      p = p - gamma*pinf 
+     
+      ! Write Gauge data to file
+      write (14,*) t, p
       
 !       ! DO average of moved aux arrays
 !       do i=1,mx
